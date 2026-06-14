@@ -1,0 +1,175 @@
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #fdfbf7;
+  --surface: #fffefb;
+  --surface-2: #f8f5ee;
+  --surface-3: #f1ede3;
+  --border: #eae3d5;
+  --border-2: #ded5c3;
+  --text: #14223d;
+  --text-2: #5a6478;
+  --text-3: #8c93a3;
+  --accent: #a9802f;
+  --accent-soft: #f3ead3;
+  --accent-line: #e3d2a6;
+  --accent-glow: rgba(169, 128, 47, .30);
+  --risk-good: #3f8f5e;
+  --risk-warn: #bc8a2e;
+  --risk-bad: #c0544d;
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 12% -8%, #fdf7ec 0%, rgba(253, 251, 247, 0) 60%),
+    radial-gradient(1100px 800px at 100% 0%, #f6f3fb 0%, rgba(253, 251, 247, 0) 55%),
+    var(--bg);
+  color: var(--text);
+  font-family:
+    "Plus Jakarta Sans",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.kicker {
+  color: var(--text-3);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.leaflet-container {
+  background: #e8eff7;
+  font-family: inherit;
+}
+
+.career-map-marker {
+  align-items: center;
+  background: var(--surface);
+  border: 2px solid #fffefb;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(40, 32, 12, .18);
+  color: var(--text);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  justify-content: center;
+  min-width: 44px;
+  padding: 6px 9px;
+}
+
+.career-map-marker.is-selected {
+  background: var(--accent);
+  border-color: var(--text);
+  color: #1c1402;
+}
+
+.career-map-home {
+  background: var(--text);
+  border: 2px solid #fffefb;
+  border-radius: 999px;
+  box-shadow: 0 0 0 14px rgba(20, 34, 61, .10), 0 0 0 28px rgba(20, 34, 61, .06);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.career-path-line {
+  animation: career-path-draw 1.4s ease both;
+  fill: none;
+  opacity: .38;
+  stroke: #a9802f;
+  stroke-dasharray: 10 7;
+  stroke-linecap: round;
+  stroke-width: .55;
+}
+
+.career-path-line.is-selected {
+  animation: career-path-draw 1.4s ease both, career-path-flow 1.8s linear infinite;
+  opacity: .95;
+  stroke: url("#career-path-flow");
+  stroke-dasharray: 12 5;
+  stroke-width: .85;
+}
+
+.career-branch-node,
+.career-route-card {
+  animation: career-node-rise .55s ease both;
+}
+
+.career-route-card {
+  animation-name: career-card-rise;
+}
+
+@keyframes career-path-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes career-path-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -34;
+  }
+}
+
+@keyframes career-node-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 14px)) scale(.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes career-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
