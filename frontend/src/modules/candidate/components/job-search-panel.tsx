@@ -207,7 +207,10 @@ function LeafletCareerMap({
   const mapRef = useRef<LeafletMap | null>(null);
   const markerLayerRef = useRef<LayerGroup | null>(null);
   const routeRef = useRef<Polyline | null>(null);
+  const routeGlowRef = useRef<Polyline | null>(null);
+  const routeNodeLayerRef = useRef<LayerGroup | null>(null);
   const animationRef = useRef<number | null>(null);
+  const pulseAnimationRef = useRef<number | null>(null);
   const leafletRef = useRef<typeof import("leaflet") | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const selectedJob = useMemo(
@@ -251,10 +254,13 @@ function LeafletCareerMap({
     return () => {
       cancelled = true;
       if (animationRef.current) window.clearInterval(animationRef.current);
+      if (pulseAnimationRef.current) window.cancelAnimationFrame(pulseAnimationRef.current);
       mapRef.current?.remove();
       mapRef.current = null;
       markerLayerRef.current = null;
       routeRef.current = null;
+      routeGlowRef.current = null;
+      routeNodeLayerRef.current = null;
       setMapReady(false);
     };
   }, []);
@@ -304,7 +310,10 @@ function LeafletCareerMap({
     async function loadRoute() {
       onRouteInfo(null);
       if (animationRef.current) window.clearInterval(animationRef.current);
+      if (pulseAnimationRef.current) window.cancelAnimationFrame(pulseAnimationRef.current);
       routeRef.current?.remove();
+      routeGlowRef.current?.remove();
+      routeNodeLayerRef.current?.remove();
 
       const route = await fetchRoute(selectedJob);
       if (cancelled) return;
@@ -313,14 +322,37 @@ function LeafletCareerMap({
       const bounds = currentL.latLngBounds(route.coordinates);
       currentMap.fitBounds(bounds, { paddingTopLeft: [390, 60], paddingBottomRight: [80, 90], maxZoom: 13 });
 
+      const glowLine = currentL.polyline(route.coordinates, {
+        color: "#F0C15C",
+        weight: 14,
+        opacity: 0.28,
+        lineCap: "round",
+        lineJoin: "round"
+      }).addTo(currentMap);
+      routeGlowRef.current = glowLine;
+
       const line = currentL.polyline([], {
         color: "#A9802F",
-        weight: 6,
-        opacity: 0.92,
+        weight: 7,
+        opacity: 0.96,
+        dashArray: "2 14",
         lineCap: "round",
         lineJoin: "round"
       }).addTo(currentMap);
       routeRef.current = line;
+
+      const routeNodeLayer = currentL.layerGroup().addTo(currentMap);
+      routeNodeLayerRef.current = routeNodeLayer;
+      const routeNodes = sampleRouteNodes(route.coordinates, 18).map((coordinate, nodeIndex) =>
+        currentL.circleMarker(coordinate, {
+          radius: nodeIndex === 0 || nodeIndex === 17 ? 6 : 4,
+          color: "#3B2A13",
+          weight: 1.5,
+          fillColor: nodeIndex === 17 ? "#DFA83C" : "#FFF4D8",
+          fillOpacity: 0.95,
+          opacity: 0.9
+        }).addTo(routeNodeLayer)
+      );
 
       const chunkSize = Math.max(1, Math.ceil(route.coordinates.length / 90));
       let index = 0;
@@ -332,12 +364,47 @@ function LeafletCareerMap({
           animationRef.current = null;
         }
       }, 16);
+
+      const pulseStartedAt = performance.now();
+      const pulseRoute = (timestamp: number) => {
+        if (cancelled) return;
+
+        const progress = ((timestamp - pulseStartedAt) % 1600) / 1600;
+        const pulse = 0.5 + Math.sin(progress * Math.PI * 2) * 0.5;
+        line.setStyle({
+          opacity: 0.72 + pulse * 0.28,
+          weight: 6 + pulse * 3,
+          dashOffset: `${Math.round(progress * -64)}`
+        });
+        glowLine.setStyle({
+          opacity: 0.16 + pulse * 0.22,
+          weight: 12 + pulse * 8
+        });
+        routeNodes.forEach((node, nodeIndex) => {
+          const nodePhase = (progress + nodeIndex / Math.max(routeNodes.length, 1)) % 1;
+          const nodePulse = 0.5 + Math.sin(nodePhase * Math.PI * 2) * 0.5;
+          const isJobNode = nodeIndex === routeNodes.length - 1;
+          node.setRadius((isJobNode ? 6 : 3.8) + nodePulse * (isJobNode ? 4.5 : 2.8));
+          node.setStyle({
+            fillOpacity: 0.55 + nodePulse * 0.4,
+            opacity: 0.55 + nodePulse * 0.4
+          });
+        });
+
+        pulseAnimationRef.current = window.requestAnimationFrame(pulseRoute);
+      };
+
+      pulseAnimationRef.current = window.requestAnimationFrame(pulseRoute);
     }
 
     loadRoute();
 
     return () => {
       cancelled = true;
+      if (pulseAnimationRef.current) {
+        window.cancelAnimationFrame(pulseAnimationRef.current);
+        pulseAnimationRef.current = null;
+      }
     };
   }, [mapReady, onRouteInfo, selectedJob]);
 
@@ -402,6 +469,15 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return 2 * radiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function sampleRouteNodes(coordinates: LatLngExpression[], nodeCount: number) {
+  if (coordinates.length <= nodeCount) return coordinates;
+
+  return Array.from({ length: nodeCount }, (_, index) => {
+    const routeIndex = Math.round((index / (nodeCount - 1)) * (coordinates.length - 1));
+    return coordinates[routeIndex];
+  });
 }
 
 function toRad(value: number) {
