@@ -12,7 +12,7 @@ Prototype URL: https://careeros-mvp-phi.vercel.app/
 
 ## Product Views
 
-CareerOS currently ships two primary frontend views:
+CareerOS currently ships two main frontend views:
 
 - `Candidate view` for students and job seekers building their Career DNA, exploring routes, searching jobs, and applying quickly.
 - `Employer view` for hiring teams reviewing talent matches, career-root sourcing, retention signals, and application decisions.
