@@ -45,6 +45,25 @@ type DnaForm = {
   learningSignals: string;
 };
 
+type ResumeModel = {
+  name: string;
+  role: string;
+  location: string;
+  email: string;
+  phone: string;
+  summary: string;
+  skills: string[];
+  experience: Array<{
+    role: string;
+    company: string;
+    period: string;
+    bullets: string[];
+  }>;
+  education: string[];
+  certifications: string[];
+  portfolio: string[];
+};
+
 const roleOptions = [
   "Software Engineer",
   "Senior Software Engineer",
@@ -152,8 +171,8 @@ export function CandidateDnaPanel() {
       pdf.line(left, y, right, y);
       y += 14;
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.setTextColor(90, 100, 120);
+      pdf.setFontSize(10.5);
+      pdf.setTextColor(20, 34, 61);
       pdf.text(title.toUpperCase(), left, y);
       y += 14;
     };
@@ -165,7 +184,7 @@ export function CandidateDnaPanel() {
       const indent = opts?.indent ?? 0;
       const size = opts?.size ?? 10.5;
       const font = opts?.font ?? "normal";
-      const color = opts?.color ?? [20, 34, 61];
+      const color = opts?.color ?? [33, 42, 55];
       pdf.setFont("helvetica", font);
       pdf.setFontSize(size);
       pdf.setTextColor(color[0], color[1], color[2]);
@@ -183,7 +202,6 @@ export function CandidateDnaPanel() {
         pdf.circle(left + 4, y - 3, 2, "F");
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(10.5);
-        pdf.setTextColor(20, 34, 61);
         pdf.text(lines, left + 14, y);
         y += lines.length * 13 + 2;
       });
@@ -209,23 +227,19 @@ export function CandidateDnaPanel() {
       left,
       y
     );
-    y += 14;
-    pdf.text(
-      `${model.workPreference}  |  ${model.salaryExpectation}  |  ${model.relocation}`,
-      left,
-      y
-    );
     y += 18;
 
     writeSectionTitle("Professional Summary");
     writeWrapped(model.summary, { size: 10.5, color: [50, 61, 74] });
+    y += 8;
 
     writeSectionTitle("Core Skills");
-    writeWrapped(model.skills.join("  •  "), { size: 10.5, color: [20, 34, 61] });
+    writeWrapped(model.skills.join("  |  "), { size: 10.5, color: [20, 34, 61] });
+    y += 8;
 
-    writeSectionTitle("Experience");
+    writeSectionTitle("Professional Experience");
     model.experience.forEach((entry) => {
-      writeWrapped(`${entry.role}  |  ${entry.company}`, { font: "bold", size: 11 });
+      writeWrapped(`${entry.role} | ${entry.company}`, { font: "bold", size: 11 });
       writeWrapped(entry.period, { size: 9.5, color: [90, 100, 120] });
       writeBullets(entry.bullets);
       y += 4;
@@ -239,14 +253,8 @@ export function CandidateDnaPanel() {
     writeSectionTitle("Certifications");
     writeBullets(model.certifications.length ? model.certifications : ["Add certifications"]);
 
-    writeSectionTitle("Selected Projects");
+    writeSectionTitle("Projects");
     writeBullets(model.portfolio.length ? model.portfolio : ["Add portfolio work"]);
-
-    writeSectionTitle("Career Interests");
-    writeWrapped(model.interests.join("  •  "), { size: 10.5, color: [20, 34, 61] });
-
-    writeSectionTitle("Recent Learning Signals");
-    writeBullets(model.learningSignals.length ? model.learningSignals : ["Add learning signals"]);
 
     pdf.save(`${form.name.replace(/\s+/g, "-").toLowerCase()}-resume.pdf`);
   };
@@ -417,7 +425,7 @@ export function CandidateDnaPanel() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="kicker">Generated CV</p>
-              <h3 className="mt-1 font-serif text-2xl font-semibold text-ink">Resume draft</h3>
+              <h3 className="mt-1 font-serif text-2xl font-semibold text-ink">ATS-friendly resume</h3>
             </div>
             <div className="flex gap-2">
               <button
@@ -442,6 +450,9 @@ export function CandidateDnaPanel() {
           <pre className="max-h-[720px] overflow-auto whitespace-pre-wrap rounded-[10px] border border-line bg-mist p-4 text-sm leading-6 text-ink">
             {resume}
           </pre>
+          <p className="mt-3 text-xs leading-5 text-faint">
+            Export uses a simpler ATS-oriented structure: standard headings, plain bullets, and no profile preference blocks.
+          </p>
         </ModuleCard>
 
         <ModuleCard>
@@ -585,10 +596,7 @@ function buildResume(form: DnaForm, certifications: CertificationEntry[]) {
     "CORE SKILLS",
     model.skills.join(" | ") || "Add skills",
     "",
-    "CAREER INTERESTS",
-    model.interests.join(" | ") || "Add interests",
-    "",
-    "EXPERIENCE",
+    "PROFESSIONAL EXPERIENCE",
     ...model.experience.flatMap((entry) => [
       `${entry.role} | ${entry.company}`,
       entry.period,
@@ -601,28 +609,18 @@ function buildResume(form: DnaForm, certifications: CertificationEntry[]) {
     "CERTIFICATIONS",
     ...formatSection(model.certifications),
     "",
-    "SELECTED PROJECTS",
-    ...formatSection(model.portfolio),
-    "",
-    "LEARNING SIGNALS",
-    ...formatSection(model.learningSignals),
-    "",
-    "PREFERENCES",
-    `Preferred work mode: ${model.workPreference}`,
-    `Salary expectation: ${model.salaryExpectation}`,
-    `Relocation: ${model.relocation}`
+    "PROJECTS",
+    ...formatSection(model.portfolio)
   ].join("\n");
 }
 
-function buildResumeModel(form: DnaForm, certifications: CertificationEntry[]) {
+function buildResumeModel(form: DnaForm, certifications: CertificationEntry[]): ResumeModel {
   const skills = splitList(form.skills);
-  const interests = splitList(form.careerInterests);
   const education = splitLines(form.education);
   const certificationLines = certifications
     .filter((entry) => entry.name.trim())
     .map((entry) => `${entry.name} | ${entry.issuer || "Issuer pending"} | ${entry.year || "Year pending"}`);
   const portfolio = splitLines(form.portfolio);
-  const learning = splitLines(form.learningSignals);
 
   return {
     name: form.name,
@@ -632,15 +630,10 @@ function buildResumeModel(form: DnaForm, certifications: CertificationEntry[]) {
     phone: form.phone,
     summary: form.summary,
     skills,
-    interests,
     experience: parseExperience(form.experience),
     education,
     certifications: certificationLines,
-    portfolio,
-    learningSignals: learning,
-    workPreference: form.workPreference,
-    salaryExpectation: form.salaryExpectation,
-    relocation: form.relocationFlexibility
+    portfolio
   };
 }
 

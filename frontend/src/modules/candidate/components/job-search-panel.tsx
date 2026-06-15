@@ -3,7 +3,7 @@
 import {
   BriefcaseBusiness,
   Clock3,
-  Layers3,
+  ClipboardCheck,
   MapPin,
   Navigation,
   Route,
@@ -25,6 +25,7 @@ type RouteInfo = {
 export function JobSearchPanel() {
   const [selectedJobId, setSelectedJobId] = useState(jobListings[0].id);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [quickApplyStep, setQuickApplyStep] = useState(0);
   const selectedJob = jobListings.find((job) => job.id === selectedJobId) ?? jobListings[0];
   const geoScore = routeInfo ? scoreCommute(routeInfo.durationMin) : selectedJob.match.geo;
   const dynamicScore = Math.round(
@@ -79,7 +80,10 @@ export function JobSearchPanel() {
                   <button
                     key={job.id}
                     type="button"
-                    onClick={() => setSelectedJobId(job.id)}
+                    onClick={() => {
+                      setSelectedJobId(job.id);
+                      setQuickApplyStep(0);
+                    }}
                     className={[
                       "rounded-[10px] border p-3 text-left transition",
                       selected
@@ -189,6 +193,36 @@ export function JobSearchPanel() {
             ))}
           </div>
         </ModuleCard>
+
+        <ModuleCard>
+          <div className="mb-3 flex items-center gap-2 font-semibold text-ink">
+            <ClipboardCheck size={17} className="text-gold" aria-hidden="true" />
+            Quick apply
+          </div>
+          <div className="grid gap-2 text-sm">
+            {["Apply", "Generate resume", "Review and approve", "Applied"].map((label, index) => (
+              <div
+                key={label}
+                className={[
+                  "rounded-[10px] border px-3 py-2 font-semibold",
+                  index <= quickApplyStep ? "border-[#E3D2A6] bg-[#F3EAD3] text-gold" : "border-line bg-mist text-muted"
+                ].join(" ")}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            Generates an ATS-friendly resume version for {selectedJob.company}, then waits for candidate approval.
+          </p>
+          <button
+            type="button"
+            onClick={() => setQuickApplyStep((current) => Math.min(3, current + 1))}
+            className="mt-4 inline-flex w-full items-center justify-center rounded-[10px] bg-ink px-4 py-2 text-sm font-semibold text-paper transition hover:bg-gold hover:text-[#1c1402]"
+          >
+            {quickApplyStep >= 3 ? "Applied" : "Continue quick apply"}
+          </button>
+        </ModuleCard>
       </aside>
     </div>
   );
@@ -235,7 +269,10 @@ function LeafletCareerMap({
       const map = L.map(mapElementRef.current, {
         center: candidateLatLng,
         zoom: 11,
-        zoomControl: false
+        zoomControl: false,
+        zoomAnimation: false,
+        markerZoomAnimation: false,
+        preferCanvas: true
       });
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
@@ -255,6 +292,7 @@ function LeafletCareerMap({
       cancelled = true;
       if (animationRef.current) window.clearInterval(animationRef.current);
       if (pulseAnimationRef.current) window.cancelAnimationFrame(pulseAnimationRef.current);
+      mapRef.current?.stop();
       mapRef.current?.remove();
       mapRef.current = null;
       markerLayerRef.current = null;
@@ -320,7 +358,13 @@ function LeafletCareerMap({
 
       onRouteInfo(route);
       const bounds = currentL.latLngBounds(route.coordinates);
-      currentMap.fitBounds(bounds, { paddingTopLeft: [390, 60], paddingBottomRight: [80, 90], maxZoom: 13 });
+      currentMap.stop();
+      currentMap.fitBounds(bounds, {
+        paddingTopLeft: [390, 60],
+        paddingBottomRight: [80, 90],
+        maxZoom: 13,
+        animate: false
+      });
 
       const glowLine = currentL.polyline(route.coordinates, {
         color: "#F0C15C",

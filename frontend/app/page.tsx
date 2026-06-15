@@ -1,5 +1,5 @@
-import { CareerOSApp } from "@/components/careeros-app";
+import { LoginGateway } from "@/components/login-gateway";
 
 export default function Home() {
-  return <CareerOSApp />;
+  return <LoginGateway />;
 }

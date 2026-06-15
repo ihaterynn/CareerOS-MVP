@@ -2,12 +2,16 @@
 
 import {
   BrainCircuit,
+  Bot,
   ChartNoAxesCombined,
+  ClipboardList,
   ClipboardCheck,
-  GraduationCap,
+  Flame,
   GitBranch,
   MapPinned,
-  Settings,
+  LayoutDashboard,
+  LineChart,
+  Network,
   UsersRound
 } from "lucide-react";
 import { useState } from "react";
@@ -19,17 +23,23 @@ import { employerModules } from "@/modules/employer/employer-data";
 import { EmployerView } from "@/modules/employer/employer-view";
 
 const candidateIcons = {
+  dashboard: LayoutDashboard,
   dna: BrainCircuit,
+  jobs: MapPinned,
   "career-path": GitBranch,
-  upskilling: GraduationCap,
-  jobs: MapPinned
+  jobby: Bot,
+  applications: ClipboardList
 } satisfies Record<CandidateModuleId, SidebarNavItem<CandidateModuleId>["icon"]>;
 
 const employerIcons = {
   dashboard: ChartNoAxesCombined,
+  "career-root": Network,
   talent: UsersRound,
+  retention: Flame,
   onboarding: ClipboardCheck,
-  admin: Settings
+  heatmap: MapPinned,
+  attrition: LineChart,
+  review: ClipboardList
 } satisfies Record<EmployerModuleId, SidebarNavItem<EmployerModuleId>["icon"]>;
 
 const candidateNav = candidateModules.map((item) => ({
@@ -44,7 +54,7 @@ const employerNav = employerModules.map((item) => ({
 
 export function CareerOSApp() {
   const [portal, setPortal] = useState<Portal>("candidate");
-  const [candidatePage, setCandidatePage] = useState<CandidateModuleId>("dna");
+  const [candidatePage, setCandidatePage] = useState<CandidateModuleId>("dashboard");
   const [employerPage, setEmployerPage] = useState<EmployerModuleId>("dashboard");
 
   if (portal === "candidate") {

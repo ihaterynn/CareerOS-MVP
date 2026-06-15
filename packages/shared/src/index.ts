@@ -1,8 +1,16 @@
 export type Portal = "candidate" | "employer";
 
-export type CandidateModuleId = "dna" | "career-path" | "upskilling" | "jobs";
+export type CandidateModuleId = "dashboard" | "dna" | "jobs" | "career-path" | "jobby" | "applications";
 
-export type EmployerModuleId = "dashboard" | "talent" | "onboarding" | "admin";
+export type EmployerModuleId =
+  | "dashboard"
+  | "career-root"
+  | "talent"
+  | "retention"
+  | "onboarding"
+  | "heatmap"
+  | "attrition"
+  | "review";
 
 export type NavigationItem<TId extends string> = {
   id: TId;

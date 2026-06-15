@@ -13,7 +13,12 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { candidateProfile, careerPathRoutes, skillSignals, type CareerPathRoute } from "../candidate-data";
+import {
+  candidateProfile,
+  careerPathRoutes,
+  skillSignals,
+  type CareerPathRoute
+} from "../candidate-data";
 import { ModuleCard, ScoreBar, Tag } from "./candidate-ui";
 
 type ChatMessage = {
@@ -23,16 +28,18 @@ type ChatMessage = {
 };
 
 const branchPositions = [
-  { x: 69, y: 17 },
-  { x: 77, y: 39 },
-  { x: 72, y: 62 },
-  { x: 63, y: 83 }
+  { x: 67, y: 13 },
+  { x: 79, y: 32 },
+  { x: 76, y: 52 },
+  { x: 70, y: 72 },
+  { x: 58, y: 88 }
 ];
 
 const trackTone = {
   Grow: "good",
   Pivot: "info",
-  Specialize: "gold"
+  Specialize: "gold",
+  Adjacent: "warn"
 } as const;
 
 export function CareerPathNavigatorPanel() {
@@ -42,7 +49,7 @@ export function CareerPathNavigatorPanel() {
     {
       id: 1,
       author: "assistant",
-      text: "I can explain each route using your profile, work history, bridge skills, and current market signals."
+      text: "I can explain each route using your Career DNA plus AI-parsed market trend signals from scraped role data."
     }
   ]);
 
@@ -69,7 +76,7 @@ export function CareerPathNavigatorPanel() {
   }
 
   return (
-    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_390px]">
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_410px]">
       <div className="grid gap-4">
         <ModuleCard className="overflow-hidden p-0">
           <div className="relative overflow-hidden border-b border-line bg-ink px-5 py-5 text-paper">
@@ -80,11 +87,11 @@ export function CareerPathNavigatorPanel() {
             <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="kicker text-[#D7C899]">01 / Career Path Navigator</p>
-                <h2 className="mt-2 font-serif text-3xl font-semibold">Realistic next moves, without guessing</h2>
+                <h2 className="mt-2 font-serif text-3xl font-semibold">Market routes parsed from real role trends</h2>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#E8DFC8]">
-                  Looks at your Career DNA, role history, learning signals, and current market patterns to
-                  show a handful of practical routes from here. It does not choose for you. It gives you
-                  evidence to work with.
+                  Uses Career DNA plus scraped market signals that AI parses into role clusters, skills,
+                  pay thresholds, projects, and learning branches. It can surface non-obvious moves
+                  like consulting or management when soft signals suggest they are realistic.
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -95,7 +102,7 @@ export function CareerPathNavigatorPanel() {
             </div>
           </div>
 
-          <div className="grid gap-0 xl:grid-cols-[290px_minmax(0,1fr)]">
+          <div className="grid gap-0 xl:grid-cols-[260px_minmax(0,1fr)]">
             <aside className="border-b border-line bg-mist p-4 xl:border-b-0 xl:border-r">
               <div className="rounded-[14px] border border-line bg-paper p-4 shadow-soft">
                 <div className="flex items-center gap-3">
@@ -110,8 +117,8 @@ export function CareerPathNavigatorPanel() {
                   </div>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-muted">
-                  Your profile already shows backend product engineering evidence, route optimization
-                  projects, SQL depth, and recent learning signals toward data and ML roles.
+                  CareerOS treats this as the source node, then compares the candidate's DNA to
+                  AI-parsed market route clusters, not one employer's open requisition.
                 </p>
               </div>
 
@@ -172,7 +179,6 @@ export function CareerPathNavigatorPanel() {
       </div>
 
       <aside className="grid gap-4 2xl:sticky 2xl:top-4 2xl:self-start">
-        <RouteDossier route={selectedRoute} />
         <NavigatorChat
           messages={messages}
           input={chatInput}
@@ -180,6 +186,7 @@ export function CareerPathNavigatorPanel() {
           onInputChange={setChatInput}
           onAsk={askNavigator}
         />
+        <RouteDossier route={selectedRoute} />
       </aside>
     </div>
   );
@@ -193,7 +200,7 @@ function CareerBranchMap({
   onSelectRoute: (routeId: string) => void;
 }) {
   return (
-    <div className="relative min-h-[620px] overflow-hidden bg-[#FBF7EC] p-4">
+    <div className="relative min-h-[520px] overflow-hidden bg-[#FBF7EC] p-4">
       <div className="absolute inset-0 opacity-70">
         <div className="absolute left-[18%] top-[16%] size-56 rounded-full bg-[#F3EAD3] blur-3xl" />
         <div className="absolute right-[10%] top-[20%] size-64 rounded-full bg-[#E8EFF7] blur-3xl" />
@@ -223,7 +230,7 @@ function CareerBranchMap({
         })}
       </svg>
 
-      <div className="relative z-10 h-full min-h-[580px]">
+      <div className="relative z-10 h-full min-h-[480px]">
         <div className="absolute left-[4%] top-1/2 w-[230px] -translate-y-1/2 rounded-[18px] border border-line bg-paper/95 p-4 shadow-lifted backdrop-blur">
           <div className="flex items-center gap-3">
             <div className="grid size-12 place-items-center rounded-full bg-ink text-paper shadow-soft">
@@ -261,6 +268,7 @@ function CareerBranchMap({
                   {route.track === "Grow" ? <TrendingUp size={18} aria-hidden="true" /> : null}
                   {route.track === "Pivot" ? <GitBranch size={18} aria-hidden="true" /> : null}
                   {route.track === "Specialize" ? <Sparkles size={18} aria-hidden="true" /> : null}
+                  {route.track === "Adjacent" ? <Compass size={18} aria-hidden="true" /> : null}
                 </div>
                 <span className="rounded-full bg-ink px-2.5 py-1 text-xs font-bold text-paper">
                   {route.readiness}%
@@ -308,8 +316,19 @@ function RouteDossier({ route }: { route: CareerPathRoute }) {
       </div>
 
       <div className="mt-5 rounded-[12px] border border-line bg-mist p-3">
-        <p className="kicker">Market signal</p>
+        <p className="kicker">AI-parsed market signal</p>
         <p className="mt-2 text-sm leading-6 text-muted">{route.marketSignal}</p>
+      </div>
+
+      <div className="mt-5">
+        <p className="mb-3 font-semibold text-ink">Scraped source signals</p>
+        <div className="grid gap-2">
+          {route.sourceSignals.map((signal) => (
+            <div key={signal} className="rounded-[10px] border border-line bg-mist p-3 text-sm leading-6 text-muted">
+              {signal}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-5">
@@ -331,6 +350,8 @@ function RouteDossier({ route }: { route: CareerPathRoute }) {
           ))}
         </div>
       </div>
+
+      <CareerTreeBranches route={route} />
 
       <div className="mt-5">
         <p className="mb-3 font-semibold text-ink">Next milestones</p>
@@ -368,16 +389,20 @@ function NavigatorChat({
   ];
 
   return (
-    <ModuleCard>
+    <ModuleCard className="border-gold bg-[#fff9ef]">
       <div className="flex items-center gap-3">
         <div className="grid size-11 place-items-center rounded-[12px] bg-ink text-paper">
           <Bot size={20} aria-hidden="true" />
         </div>
         <div>
-          <p className="kicker">Path assistant</p>
-          <h3 className="font-serif text-xl font-semibold text-ink">Ask about the route</h3>
+          <p className="kicker">Ask Jobby now</p>
+          <h3 className="font-serif text-xl font-semibold text-ink">Jobby career advisor AI</h3>
         </div>
       </div>
+
+      <p className="mt-3 text-sm leading-6 text-muted">
+        Ask about the selected route, missing signals, pay thresholds, projects, or what to learn first.
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {suggestions.map((suggestion) => (
@@ -422,7 +447,7 @@ function NavigatorChat({
         <input
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
-          placeholder={`Ask about ${selectedRoute.title}`}
+          placeholder={`Ask Jobby about ${selectedRoute.title}`}
           className="min-w-0 flex-1 rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
         />
         <button
@@ -442,6 +467,73 @@ function PathMetric({ label, value }: { label: string; value: string }) {
     <div className="min-w-[90px] rounded-[12px] border border-[#E3D2A6]/40 bg-paper/10 px-3 py-2 backdrop-blur">
       <p className="mono text-lg font-bold leading-none text-[#F3EAD3]">{value}</p>
       <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[#D7C899]">{label}</p>
+    </div>
+  );
+}
+
+function CareerTreeBranches({ route }: { route: CareerPathRoute }) {
+  return (
+    <div className="mt-5 rounded-[12px] border border-line bg-mist p-3">
+      <p className="kicker">Career tree branches</p>
+      <div className="mt-3 grid gap-3">
+        <div className="rounded-[10px] border border-line bg-paper p-3">
+          <p className="text-sm font-semibold text-ink">Skills branch</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {route.bridgeSkills.map((skill) => (
+              <Tag key={skill} tone="warn">{skill}</Tag>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[10px] border border-line bg-paper p-3">
+          <p className="text-sm font-semibold text-ink">Fair pay branch</p>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Current expectation {route.currentExpectedPay}; market route range {route.salaryRange};
+            unlocked range {route.unlockedPayRange} after more required signals are proven.
+          </p>
+          <div className="mt-3 grid gap-2">
+            {route.payEvidence.map((item) => (
+              <div key={item} className="rounded-[9px] border border-line bg-mist px-3 py-2 text-xs leading-5 text-muted">
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[10px] border border-line bg-paper p-3">
+          <p className="text-sm font-semibold text-ink">Required signals branch</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {route.requiredSignals.map((signal) => (
+              <Tag key={signal} tone="info">{signal}</Tag>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[10px] border border-line bg-paper p-3">
+          <p className="text-sm font-semibold text-ink">Project branch</p>
+          <div className="mt-2 grid gap-2">
+            {route.projects.map((project, index) => (
+              <div key={project} className="rounded-[9px] border border-line bg-mist px-3 py-2 text-sm leading-5 text-muted">
+                <span className="mono mr-2 font-bold text-gold">0{index + 1}</span>
+                {project}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-[10px] border border-line bg-paper p-3">
+          <p className="text-sm font-semibold text-ink">Course branch</p>
+          <div className="mt-2 grid gap-2">
+            {route.courses.map((course) => (
+              <a
+                key={`${route.id}-${course.targetSkill}`}
+                href={course.url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-[9px] border border-[#E3D2A6] bg-[#F3EAD3] px-3 py-2 text-sm font-semibold text-gold transition hover:border-gold hover:bg-paper"
+              >
+                {course.targetSkill}: {course.title}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -466,7 +558,7 @@ function buildNavigatorReply(prompt: string, route: CareerPathRoute) {
   }
 
   if (normalized.includes("salary")) {
-    return `${route.title} is currently modeled at ${route.salaryRange}. Treat this as a prototype range for the demo until backend market data is connected.`;
+    return `${route.title} is currently modeled at ${route.salaryRange}. That comes from AI-parsed market route signals, then adjusted by the candidate's Career DNA readiness.`;
   }
 
   return `${route.title} has ${route.readiness}% readiness over a ${route.horizon} horizon. The next useful action is: ${route.nextMilestones[0]}.`;
