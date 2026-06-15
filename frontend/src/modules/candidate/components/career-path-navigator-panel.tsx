@@ -6,7 +6,6 @@ import {
   BriefcaseBusiness,
   Compass,
   GitBranch,
-  GraduationCap,
   MessageSquareText,
   Send,
   Sparkles,

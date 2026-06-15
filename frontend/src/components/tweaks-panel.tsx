@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Icon } from "./icon";
 
 /* ============================================================
@@ -20,14 +20,9 @@ function read<T extends string>(key: string, fallback: T): T {
 }
 
 export function useDesignControls() {
-  const [accent, setAccentState] = useState<Accent>("gold");
-  const [headingFont, setFontState] = useState<HeadingFont>("source");
-
-  // Hydrate from localStorage after mount (pre-paint script set the attrs already).
-  useEffect(() => {
-    setAccentState(read<Accent>(STORE.accent, "gold"));
-    setFontState(read<HeadingFont>(STORE.font, "source"));
-  }, []);
+  // Lazy init from localStorage (pre-paint script already set the attrs).
+  const [accent, setAccentState] = useState<Accent>(() => read<Accent>(STORE.accent, "gold"));
+  const [headingFont, setFontState] = useState<HeadingFont>(() => read<HeadingFont>(STORE.font, "source"));
 
   const setAccent = useCallback((v: Accent) => {
     setAccentState(v);

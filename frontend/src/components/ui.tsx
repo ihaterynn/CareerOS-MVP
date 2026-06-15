@@ -196,7 +196,12 @@ export function Avatar({ name, size = 38, src }: { name: string; size?: number; 
         boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,.18)"
       }}
     >
-      {src ? <img src={src} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- arbitrary user/data-uri avatar; next/image unsuitable
+        <img src={src} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        initials
+      )}
     </div>
   );
 }

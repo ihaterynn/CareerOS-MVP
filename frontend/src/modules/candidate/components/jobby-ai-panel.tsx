@@ -3,13 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Bot, Send, Sparkles, ShieldCheck, User, Bolt } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
-import {
-  candidateProfile,
-  careerPathRoutes,
-  courseRecommendations,
-  jobListings,
-  candidateApplications
-} from "../candidate-data";
+import { candidateProfile, careerPathRoutes, jobListings, candidateApplications } from "../candidate-data";
 
 /* ============================================================
    Jobby.ai — AI Career Advisor + live CV updater.

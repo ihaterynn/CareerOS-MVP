@@ -167,22 +167,22 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const portal: Portal = pathname.startsWith("/employer") ? "employer" : "candidate";
   const side = shellNav[portal];
 
-  const [theme, setTheme] = useState("light");
+  // Lazy init from localStorage (pre-paint script already set the attribute).
+  const [theme, setTheme] = useState<string>(() =>
+    typeof localStorage !== "undefined" ? localStorage.getItem("cos_theme") || "light" : "light"
+  );
   const [drawer, setDrawer] = useState(false);
 
-  useEffect(() => {
-    const saved = (typeof localStorage !== "undefined" && localStorage.getItem("cos_theme")) || "light";
-    setTheme(saved);
-  }, []);
+  // Sync theme to the DOM/localStorage (external-system sync, not derived state).
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("cos_theme", theme);
   }, [theme]);
 
-  // Close the mobile drawer on route change.
-  useEffect(() => setDrawer(false), [pathname]);
-
-  const switchPortal = (p: Portal) => router.push(shellNav[p].defaultHref);
+  const switchPortal = (p: Portal) => {
+    setDrawer(false);
+    router.push(shellNav[p].defaultHref);
+  };
 
   return (
     <div className="app-shell">
