@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { CareerRootPanel } from "@/modules/employer/components/career-root-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="career-root" />;
+  return <CareerRootPanel />;
 }

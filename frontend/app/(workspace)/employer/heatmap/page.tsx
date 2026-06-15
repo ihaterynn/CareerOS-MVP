@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { SkillHeatmapPanel } from "@/modules/employer/components/heatmap-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="heatmap" />;
+  return <SkillHeatmapPanel />;
 }

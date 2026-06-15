@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { TalentMatchingPanel } from "@/modules/employer/components/talent-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="talent" />;
+  return <TalentMatchingPanel />;
 }

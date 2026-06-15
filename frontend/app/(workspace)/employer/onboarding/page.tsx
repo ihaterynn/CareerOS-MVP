@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { OnboardingPanel } from "@/modules/employer/components/onboarding-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="onboarding" />;
+  return <OnboardingPanel />;
 }

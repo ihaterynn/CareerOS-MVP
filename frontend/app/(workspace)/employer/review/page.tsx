@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { ApplicationReviewPanel } from "@/modules/employer/components/review-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="review" />;
+  return <ApplicationReviewPanel />;
 }

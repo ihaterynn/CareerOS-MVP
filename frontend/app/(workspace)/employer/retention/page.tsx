@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { RetentionPanel } from "@/modules/employer/components/retention-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="retention" />;
+  return <RetentionPanel />;
 }

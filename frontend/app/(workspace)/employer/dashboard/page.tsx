@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { EmployerDashboardPanel } from "@/modules/employer/components/dashboard-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="dashboard" />;
+  return <EmployerDashboardPanel />;
 }

@@ -1,5 +1,5 @@
-import { EmployerView } from "@/modules/employer/employer-view";
+import { AttritionPanel } from "@/modules/employer/components/attrition-panel";
 
 export default function Page() {
-  return <EmployerView activeModule="attrition" />;
+  return <AttritionPanel />;
 }
