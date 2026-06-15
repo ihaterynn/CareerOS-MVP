@@ -401,6 +401,13 @@ function LeafletCareerMap({
       const chunkSize = Math.max(1, Math.ceil(route.coordinates.length / 90));
       let index = 0;
       animationRef.current = window.setInterval(() => {
+        if (cancelled || !mapRef.current || !currentMap.hasLayer(line)) {
+          if (animationRef.current) {
+            window.clearInterval(animationRef.current);
+            animationRef.current = null;
+          }
+          return;
+        }
         index = Math.min(route.coordinates.length, index + chunkSize);
         line.setLatLngs(route.coordinates.slice(0, index));
         if (index >= route.coordinates.length && animationRef.current) {
@@ -411,7 +418,7 @@ function LeafletCareerMap({
 
       const pulseStartedAt = performance.now();
       const pulseRoute = (timestamp: number) => {
-        if (cancelled) return;
+        if (cancelled || !mapRef.current || !currentMap.hasLayer(line)) return;
 
         const progress = ((timestamp - pulseStartedAt) % 1600) / 1600;
         const pulse = 0.5 + Math.sin(progress * Math.PI * 2) * 0.5;

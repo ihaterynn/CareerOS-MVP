@@ -2,7 +2,7 @@
 
 import { ArrowRight, BriefcaseBusiness, Building2, CheckCircle2, Compass, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { CareerOSApp } from "@/components/careeros-app";
+import { useRouter } from "next/navigation";
 
 const demoCredentials = {
   email: "demo@careeros.ai",
@@ -22,13 +22,9 @@ const spotlightStats = [
 ];
 
 export function LoginGateway() {
+  const router = useRouter();
   const [email, setEmail] = useState(demoCredentials.email);
   const [password, setPassword] = useState(demoCredentials.password);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  if (isLoggedIn) {
-    return <CareerOSApp />;
-  }
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f6f0e6] text-ink">
@@ -132,7 +128,7 @@ export function LoginGateway() {
                 className="mt-6 grid gap-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  setIsLoggedIn(true);
+                  router.push("/candidate/dashboard");
                 }}
               >
                 <label className="block">

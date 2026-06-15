@@ -1,207 +1,393 @@
 "use client";
 
-import { Bot, BrainCircuit, BriefcaseBusiness, GitBranch, GraduationCap, MessageSquareText, Send, WalletCards } from "lucide-react";
-import type { ReactNode } from "react";
-import { useState } from "react";
-import { candidateApplications, candidateProfile, careerPathRoutes, courseRecommendations, jobListings } from "../candidate-data";
-import { ModuleCard, Tag } from "./candidate-ui";
+import { useState, useRef, useEffect } from "react";
+import { Bot, Send, Sparkles, ShieldCheck, User, Bolt } from "lucide-react";
+import { Badge, Button, Card } from "@/components/ui";
+import { candidateProfile, careerPathRoutes, jobListings, candidateApplications } from "../candidate-data";
 
-type JobbyMessage = {
-  id: number;
-  author: "assistant" | "candidate";
+/* ============================================================
+   Jobby.ai — AI Career Advisor + live CV updater.
+   Layout + animation preserved from the careeros advisor view:
+   left = single-source-of-truth CV; right = chat that edits it
+   live, with a typing ("Thinking") indicator and a green flash
+   when the AI appends a new, quantified bullet.
+   ============================================================ */
+
+type ChatMsg = {
+  role: "bot" | "user";
   text: string;
+  chips?: string[];
 };
 
-const suggestions = [
-  "What career path should I choose?",
-  "What salary should I ask for?",
-  "What should I learn next?",
-  "Which saved job should I apply to first?"
-];
+type CvEntry = {
+  id: string;
+  role: string;
+  org: string;
+  period: string;
+  bullets: string[];
+};
 
-export function JobbyAiPanel() {
-  const [input, setInput] = useState("");
-  const savedJobsCount = candidateApplications.length;
-  const [messages, setMessages] = useState<JobbyMessage[]>([
-    {
-      id: 1,
-      author: "assistant",
-      text: "Hi, I am Jobby.ai. I use curated Career DNA context, market-route retrieval, and agentic reasoning to answer career path, pay, course, project, resume, and application questions."
-    }
-  ]);
+const INITIAL_CV: CvEntry[] = candidateProfile.experience.map((e, i) => ({
+  id: `exp-${i}`,
+  role: e.role,
+  org: e.company,
+  period: e.period,
+  bullets: [e.impact]
+}));
 
-  function askJobby(prompt: string) {
-    const cleaned = prompt.trim();
-    if (!cleaned) return;
+const SUMMARY =
+  "Backend-leaning software engineer focused on platform performance, routing optimisation, and data products. Single living profile, always current.";
 
-    const nextId = messages.length + 1;
-    setMessages((current) => [
-      ...current,
-      { id: nextId, author: "candidate", text: cleaned },
-      { id: nextId + 1, author: "assistant", text: buildJobbyReply(cleaned) }
-    ]);
-    setInput("");
-  }
-
+function Section({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
   return (
-    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="overflow-hidden rounded-[14px] border border-line bg-paper shadow-soft">
-        <div className="relative overflow-hidden border-b border-line bg-ink px-5 py-5 text-paper">
-          <div className="absolute -right-20 top-0 size-72 rounded-full bg-[#A9802F]/30 blur-3xl" />
-          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="kicker text-[#D7C899]">Jobby.ai career advisor</p>
-              <h2 className="mt-2 font-serif text-3xl font-semibold">Ask anything about the next move</h2>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-[#E8DFC8]">
-                Jobby helps you make sense of your options using your Candidate DNA, strong job
-                matches, career pathways, saved jobs, and upskilling suggestions.
-              </p>
+    <div style={{ marginBottom: last ? 0 : 22 }}>
+      <div className="kicker" style={{ marginBottom: 10 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function CVDoc({ cv, flashId }: { cv: CvEntry[]; flashId: string | null }) {
+  return (
+    <Card pad={0} style={{ overflow: "hidden" }}>
+      <div style={{ height: 6, background: "linear-gradient(90deg, var(--accent), var(--accent-2))" }} />
+      <div style={{ padding: "26px 30px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid var(--border)", paddingBottom: 18, marginBottom: 18 }}>
+          <div>
+            <h2 style={{ fontSize: 26, marginBottom: 4 }}>{candidateProfile.name}</h2>
+            <div style={{ color: "var(--text-2)", fontSize: 14, fontWeight: 600 }}>
+              {candidateProfile.currentRole} · {candidateProfile.experience[0]?.company}
             </div>
-            <div className="grid size-14 place-items-center rounded-[18px] bg-paper/10 text-[#F3EAD3]">
-              <Bot size={28} aria-hidden="true" />
-            </div>
+            <div style={{ color: "var(--text-3)", fontSize: 12.5, marginTop: 4 }}>{candidateProfile.location}</div>
           </div>
+          <Badge tone="accent" icon="shield">Single source of truth</Badge>
         </div>
 
-        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="grid min-h-[560px] content-between gap-4 p-4">
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => askJobby(suggestion)}
-                  className="rounded-full border border-line bg-mist px-3 py-1.5 text-xs font-semibold text-muted transition hover:border-gold hover:text-ink"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
+        <Section label="Summary">
+          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--text-2)", margin: 0 }}>{SUMMARY}</p>
+        </Section>
 
-            <div className="grid max-h-[430px] gap-3 overflow-auto rounded-[14px] border border-line bg-mist p-3">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={[
-                    "max-w-[88%] rounded-[14px] px-3 py-2 text-sm leading-6",
-                    message.author === "assistant"
-                      ? "justify-self-start border border-line bg-paper text-muted"
-                      : "justify-self-end bg-ink text-paper"
-                  ].join(" ")}
-                >
-                  <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wide">
-                    {message.author === "assistant" ? <MessageSquareText size={13} aria-hidden="true" /> : null}
-                    {message.author === "assistant" ? "Jobby.ai" : "You"}
-                  </div>
-                  {message.text}
+        <Section label="Experience">
+          {cv.map((job) => (
+            <div key={job.id} style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <div style={{ fontWeight: 700, fontSize: 14.5 }}>
+                  {job.role} · <span style={{ color: "var(--accent)" }}>{job.org}</span>
                 </div>
-              ))}
-            </div>
-
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                askJobby(input);
-              }}
-            >
-              <input
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Ask about jobs, pay, skills, courses, or applications"
-                className="min-w-0 flex-1 rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-              />
-              <button
-                type="submit"
-                className="grid size-10 shrink-0 place-items-center rounded-[12px] bg-gold text-paper transition hover:bg-ink"
-                aria-label="Ask Jobby"
-              >
-                <Send size={17} aria-hidden="true" />
-              </button>
-            </form>
-          </div>
-
-          <aside className="border-t border-line bg-mist p-4 xl:border-l xl:border-t-0">
-            <p className="kicker">Context Jobby uses</p>
-            <div className="mt-4 grid gap-3">
-              <ContextTile icon={<BriefcaseBusiness size={17} />} label="Scored jobs" value={`Uses high-scoring available jobs like ${jobListings[0].title} at ${jobListings[0].match.overall}% fit.`} />
-              <ContextTile icon={<BrainCircuit size={17} />} label="Candidate DNA" value={`Reads skills, preferences, experience, and learning signals for ${candidateProfile.currentRole}.`} />
-              <ContextTile icon={<GitBranch size={17} />} label="Career pathways" value={`Uses ${careerPathRoutes.length} generated market routes, including ${careerPathRoutes[0].title}.`} />
-              <ContextTile icon={<WalletCards size={17} />} label="Saved jobs" value={`Considers ${savedJobsCount} saved or active application targets when prioritizing advice.`} />
-              <ContextTile icon={<GraduationCap size={17} />} label="Upskilling" value={`Uses ${courseRecommendations.length} Coursera recommendations tied to missing skills and route gaps.`} />
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      <aside className="grid content-start gap-4 2xl:sticky 2xl:top-20">
-        <ModuleCard>
-          <p className="kicker">Fast recommendation</p>
-          <h3 className="mt-2 font-serif text-2xl font-semibold text-ink">{careerPathRoutes[0].title}</h3>
-          <p className="mt-3 text-sm leading-6 text-muted">
-            This is the strongest near-term market route because it combines high Career DNA
-            readiness, strong pay potential, and a small bridge-skill set.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Tag tone="good">{careerPathRoutes[0].readiness}% route readiness</Tag>
-            <Tag tone="gold">{careerPathRoutes[0].unlockedPayRange}</Tag>
-            {careerPathRoutes[0].bridgeSkills.map((skill) => (
-              <Tag key={skill} tone="warn">{skill}</Tag>
-            ))}
-          </div>
-        </ModuleCard>
-
-        <ModuleCard>
-          <p className="kicker">What Jobby can answer</p>
-          <div className="mt-3 grid gap-2">
-            {["Career route advice", "Pay threshold explanation", "Course recommendations", "Project suggestions", "Resume positioning", "Quick apply priority"].map((item) => (
-              <div key={item} className="rounded-[10px] border border-line bg-mist px-3 py-2 text-sm font-semibold text-muted">
-                {item}
+                <div className="mono" style={{ fontSize: 11.5, color: "var(--text-3)" }}>{job.period}</div>
               </div>
+              <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none", display: "grid", gap: 4 }}>
+                {job.bullets.map((b, i) => {
+                  const flash = flashId === job.id + ":" + i;
+                  return (
+                    <li
+                      key={i}
+                      style={{
+                        display: "flex",
+                        gap: 9,
+                        fontSize: 13,
+                        lineHeight: 1.5,
+                        color: "var(--text-2)",
+                        padding: "4px 8px",
+                        marginLeft: -8,
+                        borderRadius: 6,
+                        animation: flash ? "greenflash 2.4s var(--ease) forwards" : "none"
+                      }}
+                    >
+                      <span style={{ color: flash ? "var(--risk-good)" : "var(--accent)", marginTop: 6, flexShrink: 0 }}>
+                        <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "currentColor" }} />
+                      </span>
+                      <span>
+                        {b}
+                        {flash && <Badge tone="good" icon="sparkles" style={{ marginLeft: 8, verticalAlign: "middle" }}>Just added</Badge>}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </Section>
+
+        <Section label="Education">
+          {candidateProfile.education.map((ed) => (
+            <div key={ed.school} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{ed.school}</div>
+                <div style={{ fontSize: 12.5, color: "var(--text-2)" }}>{ed.credential}</div>
+              </div>
+              <div className="mono" style={{ fontSize: 11.5, color: "var(--text-3)" }}>{ed.year}</div>
+            </div>
+          ))}
+        </Section>
+
+        <Section label="Skills" last>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+            {candidateProfile.careerInterests.map((s) => (
+              <Badge key={s}>{s}</Badge>
             ))}
           </div>
-        </ModuleCard>
-      </aside>
-    </div>
-  );
-}
-
-function ContextTile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-[12px] border border-line bg-paper p-3">
-      <div className="flex items-center gap-2 text-gold">
-        {icon}
-        <span className="kicker">{label}</span>
+        </Section>
       </div>
-      <p className="mt-2 text-sm font-semibold leading-5 text-ink">{value}</p>
+    </Card>
+  );
+}
+
+function ChatBubble({ m }: { m: ChatMsg }) {
+  const bot = m.role === "bot";
+  return (
+    <div className="anim-fade-up" style={{ display: "flex", gap: 9, flexDirection: bot ? "row" : "row-reverse" }}>
+      <div
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: "50%",
+          flexShrink: 0,
+          display: "grid",
+          placeItems: "center",
+          background: bot ? "var(--accent)" : "var(--surface-3)",
+          color: bot ? "var(--accent-contrast)" : "var(--text-2)"
+        }}
+      >
+        {bot ? <Sparkles size={15} aria-hidden="true" /> : <User size={15} aria-hidden="true" />}
+      </div>
+      <div
+        style={{
+          maxWidth: "78%",
+          padding: "10px 13px",
+          borderRadius: 14,
+          borderTopLeftRadius: bot ? 4 : 14,
+          borderTopRightRadius: bot ? 14 : 4,
+          background: bot ? "var(--surface-2)" : "var(--accent)",
+          color: bot ? "var(--text)" : "var(--accent-contrast)",
+          border: "1px solid " + (bot ? "var(--border)" : "transparent"),
+          fontSize: 13.5,
+          lineHeight: 1.5
+        }}
+      >
+        {m.text}
+        {m.chips && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
+            {m.chips.map((c, i) => (
+              <Badge key={i} tone="accent" icon="check">{c}</Badge>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function buildJobbyReply(prompt: string) {
-  const normalized = prompt.toLowerCase();
+function Thinking() {
+  return (
+    <div className="anim-fade-up" style={{ display: "flex", gap: 9 }}>
+      <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", background: "var(--accent)", color: "var(--accent-contrast)" }}>
+        <Sparkles size={15} aria-hidden="true" />
+      </div>
+      <div style={{ padding: "13px 15px", borderRadius: 14, borderTopLeftRadius: 4, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", gap: 5 }}>
+          {[0, 1, 2].map((i) => (
+            <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", animation: `dot-bounce 1.2s ${i * 0.15}s infinite` }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function buildJobbyReply(prompt: string): { text: string; chips?: string[]; bullet?: string } {
+  const n = prompt.toLowerCase();
   const bestJob = jobListings[0];
   const bestRoute = careerPathRoutes[0];
+  const savedJobsCount = candidateApplications.length;
 
-  if (normalized.includes("salary") || normalized.includes("pay") || normalized.includes("ask")) {
-    return `For the ${bestRoute.title} route, the current expected pay is ${bestRoute.currentExpectedPay}; the unlocked range is ${bestRoute.unlockedPayRange} after proving ${bestRoute.requiredSignals.slice(0, 2).join(" and ")}.`;
+  if (/rout|deliver|python|optimi|fuel|logistic/.test(n)) {
+    return {
+      text: "Done — I've added a quantified bullet under your current role and tagged the new skills so employers searching for them can find you.",
+      chips: ["Python", "OR-Tools", "Route optimisation"],
+      bullet: "Led a delivery-route optimisation project in Python with OR-Tools, cutting fuel cost ~18%."
+    };
   }
-
-  if (normalized.includes("learn") || normalized.includes("course") || normalized.includes("skill")) {
-    return `Start with ${bestRoute.bridgeSkills[0]}. The Career Tree maps it to ${bestRoute.courses[0].title}, then you should complete the project: ${bestRoute.projects[0]}`;
+  if (n.includes("salary") || n.includes("pay") || n.includes("ask")) {
+    return {
+      text: `For the ${bestRoute.title} route, current expected pay is ${bestRoute.currentExpectedPay}; the unlocked range is ${bestRoute.unlockedPayRange} once you prove ${bestRoute.requiredSignals.slice(0, 2).join(" and ")}.`
+    };
   }
-
-  if (normalized.includes("apply") || normalized.includes("job")) {
-    return `Apply first to ${bestJob.title} at ${bestJob.company}. It has the highest employer-job match score, while the Career Tree shows which market-route signals and pay thresholds to build toward next.`;
+  if (n.includes("learn") || n.includes("course") || n.includes("skill")) {
+    return {
+      text: `Start with ${bestRoute.bridgeSkills[0]} — mapped to ${bestRoute.courses[0].title}, then build the project: ${bestRoute.projects[0]}.`,
+      chips: [bestRoute.bridgeSkills[0]]
+    };
   }
-
-  if (normalized.includes("path") || normalized.includes("career")) {
-    return `The most realistic market route is ${bestRoute.title}, but Career DNA also surfaces adjacent paths like Technology Consultant when soft signals indicate business-context potential. ${bestRoute.title} is ${bestRoute.readiness}% ready over ${bestRoute.horizon}.`;
+  if (n.includes("apply") || n.includes("job")) {
+    return {
+      text: `Apply first to ${bestJob.title} at ${bestJob.company} — highest employer-job match. You have ${savedJobsCount} active targets to prioritise after that.`
+    };
   }
-
-  if (normalized.includes("resume")) {
-    return `Position the resume around backend platform ownership: dispatch latency reduction, PostgreSQL tuning, Go exposure, AWS, and route optimization portfolio evidence.`;
+  if (n.includes("path") || n.includes("career")) {
+    return {
+      text: `The most realistic market route is ${bestRoute.title} — ${bestRoute.readiness}% ready over ${bestRoute.horizon}. Career DNA also surfaces adjacent paths when soft signals support them.`
+    };
   }
+  if (n.includes("resume") || n.includes("cv")) {
+    return {
+      text: "Position the CV around backend platform ownership: dispatch latency reduction, PostgreSQL tuning, and route-optimisation portfolio evidence. Tell me a recent win and I'll write it up."
+    };
+  }
+  return {
+    text: `Jobby recommends starting with ${bestRoute.title}: close ${bestRoute.bridgeSkills.join(" and ")}, build "${bestRoute.projects[0]}", and target the ${bestRoute.unlockedPayRange} pay band once those signals are proven.`
+  };
+}
 
-  return `Jobby recommends starting with ${bestRoute.title}: close ${bestRoute.bridgeSkills.join(" and ")}, build the project "${bestRoute.projects[0]}", and use the tree pay threshold ${bestRoute.unlockedPayRange} once those signals are proven.`;
+const SUGGESTION = "I just led a project optimising delivery routes using Python — we cut fuel cost by 18%.";
+
+export function JobbyAiPanel() {
+  const [cv, setCv] = useState<CvEntry[]>(() => INITIAL_CV.map((j) => ({ ...j, bullets: [...j.bullets] })));
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const [thinking, setThinking] = useState(false);
+  const [input, setInput] = useState("");
+  const [usedSuggestion, setUsedSuggestion] = useState(false);
+  const [msgs, setMsgs] = useState<ChatMsg[]>([
+    {
+      role: "bot",
+      text: `Hi ${candidateProfile.name.split(" ")[0]} 👋 I keep your CV current as you grow, using your Career DNA, job matches, and market routes. Tell me a recent project, win, or new skill — I'll write it up.`
+    }
+  ]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [msgs, thinking]);
+
+  // Clean up pending timers on unmount.
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  const send = (text: string) => {
+    if (!text.trim() || thinking) return;
+    setMsgs((m) => [...m, { role: "user", text }]);
+    setInput("");
+    setThinking(true);
+    const reply = buildJobbyReply(text);
+
+    timers.current.push(
+      setTimeout(() => {
+        setThinking(false);
+        if (reply.bullet) {
+          setCv((prev) => {
+            const copy = prev.map((j) => ({ ...j, bullets: [...j.bullets] }));
+            copy[0].bullets.push(reply.bullet as string);
+            setFlashId(copy[0].id + ":" + (copy[0].bullets.length - 1));
+            return copy;
+          });
+          timers.current.push(setTimeout(() => setFlashId(null), 2600));
+        }
+        setMsgs((m) => [...m, { role: "bot", text: reply.text, chips: reply.chips }]);
+      }, 1500)
+    );
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 18 }}>
+        <div className="kicker">Jobby.ai career advisor</div>
+        <h2 style={{ fontSize: 26, marginTop: 6 }}>Talk to your CV</h2>
+        <p style={{ color: "var(--text-2)", fontSize: 14, marginTop: 6, maxWidth: 640, lineHeight: 1.55 }}>
+          One living profile, always current. Describe your work in plain language — Jobby turns it into recruiter-ready,
+          quantified bullets and answers career-path, pay, course, and application questions using your Career DNA.
+        </p>
+      </div>
+
+      <div className="jobby-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.3fr) minmax(340px,.9fr)", gap: 22, alignItems: "start" }}>
+        <CVDoc cv={cv} flashId={flashId} />
+
+        <Card pad={0} style={{ position: "sticky", top: 20, display: "flex", flexDirection: "column", height: "min(680px, calc(100vh - 120px))", overflow: "hidden" }}>
+          <div style={{ padding: "15px 18px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "var(--accent-soft)", color: "var(--accent)" }}>
+              <Bot size={18} aria-hidden="true" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Career Advisor</div>
+              <div style={{ fontSize: 11.5, color: "var(--risk-good)", display: "flex", alignItems: "center", gap: 5, fontWeight: 600 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--risk-good)" }} />
+                Online · writes to your CV
+              </div>
+            </div>
+            <ShieldCheck size={16} aria-hidden="true" style={{ color: "var(--text-3)" }} />
+          </div>
+
+          <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+            {msgs.map((m, i) => (
+              <ChatBubble key={i} m={m} />
+            ))}
+            {thinking && <Thinking />}
+          </div>
+
+          {!usedSuggestion && (
+            <div style={{ padding: "0 18px 10px" }}>
+              <button
+                onClick={() => {
+                  setUsedSuggestion(true);
+                  send(SUGGESTION);
+                }}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  background: "var(--accent-soft)",
+                  border: "1px dashed var(--accent-line)",
+                  color: "var(--accent)",
+                  borderRadius: "var(--r-sm)",
+                  padding: "9px 12px",
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8
+                }}
+              >
+                <Bolt size={14} aria-hidden="true" /> Try: &quot;{SUGGESTION.slice(0, 46)}…&quot;
+              </button>
+            </div>
+          )}
+
+          <div style={{ padding: 14, borderTop: "1px solid var(--border)", display: "flex", gap: 9, alignItems: "flex-end" }}>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send(input);
+                }
+              }}
+              placeholder="Describe a recent project or win…"
+              style={{
+                flex: 1,
+                resize: "none",
+                border: "1px solid var(--border-2)",
+                borderRadius: "var(--r-sm)",
+                padding: "10px 12px",
+                fontSize: 13.5,
+                background: "var(--inset)",
+                color: "var(--text)",
+                outline: "none",
+                maxHeight: 90
+              }}
+            />
+            <Button variant="primary" size="md" onClick={() => send(input)} disabled={!input.trim() || thinking} style={{ padding: 11 }}>
+              <Send size={16} aria-hidden="true" />
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      <style>{`
+        @media (max-width: 1023px) {
+          .jobby-grid { grid-template-columns: 1fr !important; }
+          .jobby-grid > div:last-child { position: static !important; height: auto !important; min-height: 460px; }
+        }
+      `}</style>
+    </div>
+  );
 }
