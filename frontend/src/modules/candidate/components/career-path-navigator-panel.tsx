@@ -18,7 +18,7 @@ import {
   skillSignals,
   type CareerPathRoute
 } from "../candidate-data";
-import { ModuleCard, ScoreBar, Tag } from "./candidate-ui";
+import { Collapsible, ModuleCard, ScoreBar, Tag } from "./candidate-ui";
 
 type ChatMessage = {
   id: number;
@@ -75,7 +75,7 @@ export function CareerPathNavigatorPanel() {
   }
 
   return (
-    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_410px]">
+    <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_410px]">
       <div className="grid gap-4">
         <ModuleCard className="overflow-hidden p-0">
           <div className="relative overflow-hidden border-b border-line bg-ink px-5 py-5 text-paper">
@@ -319,49 +319,49 @@ function RouteDossier({ route }: { route: CareerPathRoute }) {
         <p className="mt-2 text-sm leading-6 text-muted">{route.marketSignal}</p>
       </div>
 
-      <div className="mt-5">
-        <p className="mb-3 font-semibold text-ink">Scraped source signals</p>
-        <div className="grid gap-2">
-          {route.sourceSignals.map((signal) => (
-            <div key={signal} className="rounded-[10px] border border-line bg-mist p-3 text-sm leading-6 text-muted">
-              {signal}
-            </div>
-          ))}
-        </div>
-      </div>
+      <div className="mt-5 grid gap-3">
+        <Collapsible title="Scraped source signals">
+          <div className="grid gap-2">
+            {route.sourceSignals.map((signal) => (
+              <div key={signal} className="rounded-[10px] border border-line bg-paper p-3 text-sm leading-6 text-muted">
+                {signal}
+              </div>
+            ))}
+          </div>
+        </Collapsible>
 
-      <div className="mt-5">
-        <p className="mb-3 font-semibold text-ink">Why this is realistic</p>
-        <div className="grid gap-2">
-          {route.whyRealistic.map((reason) => (
-            <div key={reason} className="rounded-[10px] border border-line bg-paper p-3 text-sm leading-6 text-muted">
-              {reason}
-            </div>
-          ))}
-        </div>
-      </div>
+        <Collapsible title="Why this is realistic">
+          <div className="grid gap-2">
+            {route.whyRealistic.map((reason) => (
+              <div key={reason} className="rounded-[10px] border border-line bg-paper p-3 text-sm leading-6 text-muted">
+                {reason}
+              </div>
+            ))}
+          </div>
+        </Collapsible>
 
-      <div className="mt-5">
-        <p className="mb-3 font-semibold text-ink">Bridge skills</p>
-        <div className="flex flex-wrap gap-2">
-          {route.bridgeSkills.map((skill) => (
-            <Tag key={skill} tone="warn">{skill}</Tag>
-          ))}
-        </div>
-      </div>
+        <Collapsible title="Bridge skills">
+          <div className="flex flex-wrap gap-2">
+            {route.bridgeSkills.map((skill) => (
+              <Tag key={skill} tone="warn">{skill}</Tag>
+            ))}
+          </div>
+        </Collapsible>
 
-      <CareerTreeBranches route={route} />
+        <Collapsible title="Career tree branches">
+          <CareerTreeBranches route={route} />
+        </Collapsible>
 
-      <div className="mt-5">
-        <p className="mb-3 font-semibold text-ink">Next milestones</p>
-        <ol className="grid gap-2">
-          {route.nextMilestones.map((milestone, index) => (
-            <li key={milestone} className="flex gap-3 rounded-[10px] border border-line bg-mist p-3 text-sm text-muted">
-              <span className="mono font-bold text-gold">0{index + 1}</span>
-              <span>{milestone}</span>
-            </li>
-          ))}
-        </ol>
+        <Collapsible title="Next milestones" defaultOpen>
+          <ol className="grid gap-2">
+            {route.nextMilestones.map((milestone, index) => (
+              <li key={milestone} className="flex gap-3 rounded-[10px] border border-line bg-paper p-3 text-sm text-muted">
+                <span className="mono font-bold text-gold">0{index + 1}</span>
+                <span>{milestone}</span>
+              </li>
+            ))}
+          </ol>
+        </Collapsible>
       </div>
     </ModuleCard>
   );
@@ -472,9 +472,7 @@ function PathMetric({ label, value }: { label: string; value: string }) {
 
 function CareerTreeBranches({ route }: { route: CareerPathRoute }) {
   return (
-    <div className="mt-5 rounded-[12px] border border-line bg-mist p-3">
-      <p className="kicker">Career tree branches</p>
-      <div className="mt-3 grid gap-3">
+    <div className="grid gap-3">
         <div className="rounded-[10px] border border-line bg-paper p-3">
           <p className="text-sm font-semibold text-ink">Skills branch</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -533,7 +531,6 @@ function CareerTreeBranches({ route }: { route: CareerPathRoute }) {
           </div>
         </div>
       </div>
-    </div>
   );
 }
 

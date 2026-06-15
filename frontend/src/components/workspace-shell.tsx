@@ -255,14 +255,14 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className="cos-body" style={{ display: "grid", gridTemplateColumns: "236px 1fr", maxWidth: "var(--maxw)", margin: "0 auto" }}>
+      <div className="cos-body" style={{ display: "grid", gridTemplateColumns: "clamp(216px, 16vw, 264px) minmax(0, 1fr)", width: "100%", margin: "0 auto" }}>
         <aside
           className="cos-sidebar"
           style={{
             position: "sticky",
             top: 64,
             height: "calc(100vh - 64px)",
-            padding: "22px 16px",
+            padding: "22px 1vw",
             borderRight: "1px solid var(--border)",
             display: "flex",
             flexDirection: "column",
@@ -285,7 +285,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <main key={pathname} className="anim-fade-up" style={{ padding: "28px 32px 60px", minWidth: 0 }}>
+        <main key={pathname} className="anim-fade-up" style={{ padding: "3vh 2vw 8vh", minWidth: 0, minHeight: "calc(100vh - 64px)" }}>
           {children}
         </main>
       </div>
@@ -321,7 +321,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           .cos-sidebar { display: none !important; }
           .cos-burger { display: grid !important; }
           .cos-portal-wrap { justify-content: flex-start !important; }
-          .app-shell main { padding: 20px 16px 48px !important; }
+          .app-shell main { padding: 2.5vh 4vw 8vh !important; }
         }
       `}</style>
     </div>

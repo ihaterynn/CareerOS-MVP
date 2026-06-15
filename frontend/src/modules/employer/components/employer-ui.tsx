@@ -1,7 +1,40 @@
 "use client";
 
 import type { EmployerModuleId } from "@careeros/shared";
+import { ChevronDown } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { employerModules, type SkillHeatmapPoint, type TalentMatch } from "../employer-data";
+
+export function Collapsible({
+  title,
+  defaultOpen = false,
+  children
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <section className="rounded-[14px] border border-line bg-mist">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left"
+      >
+        <span className="text-sm font-semibold text-ink">{title}</span>
+        <ChevronDown
+          size={16}
+          aria-hidden="true"
+          className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open ? <div className="border-t border-line px-3 pb-3 pt-3">{children}</div> : null}
+    </section>
+  );
+}
 
 export const statusTone = {
   New: "border-line bg-mist text-muted",
@@ -48,32 +81,45 @@ export function CandidateDnaPanel({ candidate, ctaLabel }: { candidate: TalentMa
         </div>
       </div>
 
-      <div className="grid gap-4 p-4">
-        <section className="rounded-[14px] border border-line bg-mist p-3">
-          <p className="kicker">Composite score</p>
-          <div className="mt-3 grid gap-3">
+      <div className="grid items-start gap-3 p-4 lg:grid-cols-2">
+        <Collapsible title="Composite score" defaultOpen>
+          <div className="grid gap-3">
             <ScoreBar label="Skills" value={candidate.skillFit} />
             <ScoreBar label="Experience" value={candidate.experienceFit} />
             <ScoreBar label="Education" value={candidate.educationFit} />
             <ScoreBar label="Interest signal" value={candidate.interestSignal} />
           </div>
-        </section>
+        </Collapsible>
 
-        <ProfileSection title="Profile" items={[candidate.education, ...candidate.experience]} />
-        <ProfileSection title="Certifications" items={candidate.certifications} />
-        <ProfileSection title="Learning signals" items={candidate.learningSignals} />
-        <ProfileSection title="Career interests" items={candidate.careerInterests} />
-        <ProfileSection title="Portfolio evidence" items={candidate.portfolio} />
-        <TagList title="Skills" items={candidate.skills} tone="info" />
-        <TagList title="DNA signals" items={candidate.dnaSignals} tone="good" />
-        <TagList title="Missing signals" items={candidate.missingSignals} tone="warn" />
+        <Collapsible title="Profile">
+          <ItemList items={[candidate.education, ...candidate.experience]} />
+        </Collapsible>
+        <Collapsible title="Certifications">
+          <ItemList items={candidate.certifications} />
+        </Collapsible>
+        <Collapsible title="Learning signals">
+          <ItemList items={candidate.learningSignals} />
+        </Collapsible>
+        <Collapsible title="Career interests">
+          <ItemList items={candidate.careerInterests} />
+        </Collapsible>
+        <Collapsible title="Portfolio evidence">
+          <ItemList items={candidate.portfolio} />
+        </Collapsible>
+        <Collapsible title="Skills">
+          <TagRow items={candidate.skills} tone="info" />
+        </Collapsible>
+        <Collapsible title="DNA signals">
+          <TagRow items={candidate.dnaSignals} tone="good" />
+        </Collapsible>
+        <Collapsible title="Missing signals">
+          <TagRow items={candidate.missingSignals} tone="warn" />
+        </Collapsible>
+        <Collapsible title="Mobility intent">
+          <p className="text-sm leading-6 text-ink">{candidate.mobilityIntent}</p>
+        </Collapsible>
 
-        <div className="rounded-[14px] border border-[#E3D2A6] bg-[#F3EAD3] p-3">
-          <p className="kicker text-gold">Mobility intent</p>
-          <p className="mt-2 text-sm leading-6 text-ink">{candidate.mobilityIntent}</p>
-        </div>
-
-        <button type="button" className="rounded-[12px] bg-ink px-4 py-3 text-sm font-semibold text-paper transition hover:bg-gold hover:text-[#1c1402]">
+        <button type="button" className="rounded-[12px] bg-ink px-4 py-3 text-sm font-semibold text-paper transition hover:bg-gold hover:text-[#1c1402] lg:col-span-2">
           {ctaLabel}
         </button>
       </div>
@@ -186,22 +232,19 @@ export function RiskDial({ value }: { value: number }) {
   );
 }
 
-export function ProfileSection({ title, items }: { title: string; items: string[] }) {
+export function ItemList({ items }: { items: string[] }) {
   return (
-    <section>
-      <p className="mb-2 text-sm font-semibold text-ink">{title}</p>
-      <div className="grid gap-2">
-        {items.map((item) => (
-          <div key={item} className="rounded-[10px] border border-line bg-mist px-3 py-2 text-sm leading-6 text-muted">
-            {item}
-          </div>
-        ))}
-      </div>
-    </section>
+    <div className="grid gap-2">
+      {items.map((item) => (
+        <div key={item} className="rounded-[10px] border border-line bg-paper px-3 py-2 text-sm leading-6 text-muted">
+          {item}
+        </div>
+      ))}
+    </div>
   );
 }
 
-export function TagList({ title, items, tone }: { title: string; items: string[]; tone: "good" | "warn" | "info" }) {
+export function TagRow({ items, tone }: { items: string[]; tone: "good" | "warn" | "info" }) {
   const toneClass = {
     good: "bg-[#EAF4EC] text-good",
     warn: "bg-[#F7EFD9] text-warn",
@@ -209,15 +252,30 @@ export function TagList({ title, items, tone }: { title: string; items: string[]
   }[tone];
 
   return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <span key={item} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${toneClass}`}>
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export function ProfileSection({ title, items }: { title: string; items: string[] }) {
+  return (
+    <section>
+      <p className="mb-2 text-sm font-semibold text-ink">{title}</p>
+      <ItemList items={items} />
+    </section>
+  );
+}
+
+export function TagList({ title, items, tone }: { title: string; items: string[]; tone: "good" | "warn" | "info" }) {
+  return (
     <div className="mt-4">
       <p className="mb-2 text-sm font-semibold text-ink">{title}</p>
-      <div className="flex flex-wrap gap-2">
-        {items.map((item) => (
-          <span key={item} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${toneClass}`}>
-            {item}
-          </span>
-        ))}
-      </div>
+      <TagRow items={items} tone={tone} />
     </div>
   );
 }

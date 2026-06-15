@@ -1,4 +1,38 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { ChevronDown } from "lucide-react";
+import { useState, type ReactNode } from "react";
+
+export function Collapsible({
+  title,
+  defaultOpen = false,
+  children
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <section className="rounded-[12px] border border-line bg-mist">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left"
+      >
+        <span className="text-sm font-semibold text-ink">{title}</span>
+        <ChevronDown
+          size={16}
+          aria-hidden="true"
+          className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open ? <div className="border-t border-line px-3 pb-3 pt-3">{children}</div> : null}
+    </section>
+  );
+}
 
 export function ModuleCard({
   children,
