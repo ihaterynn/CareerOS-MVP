@@ -63,7 +63,7 @@ export function CandidateDashboardPanel() {
               <h3 className="font-semibold text-ink">Profile and resume builder</h3>
             </div>
             <p className="text-sm leading-6 text-muted">
-              {candidateProfile.name}'s Career DNA powers the ATS resume, matching scores, career tree,
+              {candidateProfile.name}&apos;s Career DNA powers the ATS resume, matching scores, career tree,
               and AI-tailored quick apply resume versions.
             </p>
             <div className="mt-4 grid gap-3">

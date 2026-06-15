@@ -117,8 +117,8 @@ export function CareerPathNavigatorPanel() {
                   </div>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-muted">
-                  CareerOS treats this as the source node, then compares the candidate's DNA to
-                  AI-parsed market route clusters, not one employer's open requisition.
+                  CareerOS treats this as the source node, then compares the candidate&apos;s DNA to
+                  AI-parsed market route clusters, not one employer&apos;s open requisition.
                 </p>
               </div>
 
