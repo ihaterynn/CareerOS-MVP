@@ -1,81 +1,244 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
+@import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ============================================================
+   CareerOS — design tokens (merged from careeros design system)
+   Light = cream / deep blue · Dark = midnight / cream
+   Accent switchable: gold | indigo (set data-accent on <html>)
+   ============================================================ */
 
 :root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --maxw: 1320px;
+
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+}
+
+/* heading-font tweak hook */
+:root[data-headingfont="newsreader"] { --font-serif: 'Newsreader', Georgia, serif; }
+
+/* ---------- LIGHT ---------- */
+:root, :root[data-theme="light"] {
+  --bg:        #FDFBF7;
+  --bg-grad:   radial-gradient(1200px 700px at 12% -8%, #fdf7ec 0%, rgba(253,251,247,0) 60%),
+               radial-gradient(1100px 800px at 100% 0%, #f6f3fb 0%, rgba(253,251,247,0) 55%);
+  --surface:   #FFFEFB;
+  --surface-2: #F8F5EE;
+  --surface-3: #F1EDE3;
+  --inset:     #FBF8F1;
+  --border:    #EAE3D5;
+  --border-2:  #DED5C3;
+  --text:      #14223D;
+  --text-2:    #5A6478;
+  --text-3:    #8C93A3;
+  --text-inv:  #FBF8F1;
+
+  --shadow-sm: 0 1px 2px rgba(40,32,12,.04), 0 1px 3px rgba(40,32,12,.05);
+  --shadow:    0 2px 6px rgba(40,32,12,.05), 0 8px 24px rgba(40,32,12,.06);
+  --shadow-lg: 0 8px 18px rgba(40,32,12,.08), 0 24px 60px rgba(40,32,12,.12);
+
+  --risk-good:  #3F8F5E;  --risk-good-bg:  #EAF4EC;
+  --risk-warn:  #BC8A2E;  --risk-warn-bg:  #F7EFD9;
+  --risk-bad:   #C0544D;  --risk-bad-bg:   #F8E8E5;
+  --info:       #3E6EA8;  --info-bg:       #E8EFF7;
+
+  --grid-line: rgba(20,34,61,.05);
   color-scheme: light;
-  --bg: #fdfbf7;
-  --surface: #fffefb;
-  --surface-2: #f8f5ee;
-  --surface-3: #f1ede3;
-  --border: #eae3d5;
-  --border-2: #ded5c3;
-  --text: #14223d;
-  --text-2: #5a6478;
-  --text-3: #8c93a3;
-  --accent: #a9802f;
-  --accent-soft: #f3ead3;
-  --accent-line: #e3d2a6;
-  --accent-glow: rgba(169, 128, 47, .30);
-  --risk-good: #3f8f5e;
-  --risk-warn: #bc8a2e;
-  --risk-bad: #c0544d;
-  background: var(--bg);
 }
 
-* {
-  box-sizing: border-box;
+/* ---------- DARK ---------- */
+:root[data-theme="dark"] {
+  --bg:        #0A0F1D;
+  --bg-grad:   radial-gradient(1200px 700px at 10% -10%, #14213b 0%, rgba(10,15,29,0) 60%),
+               radial-gradient(1100px 800px at 100% 0%, #1a1736 0%, rgba(10,15,29,0) 55%);
+  --surface:   #111A2E;
+  --surface-2: #16213A;
+  --surface-3: #1C2942;
+  --inset:     #0D1424;
+  --border:    #243250;
+  --border-2:  #2E3F62;
+  --text:      #F4F7FB;
+  --text-2:    #9AA7C0;
+  --text-3:    #6B7896;
+  --text-inv:  #0A0F1D;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+  --shadow:    0 2px 8px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.4);
+  --shadow-lg: 0 12px 28px rgba(0,0,0,.45), 0 30px 70px rgba(0,0,0,.55);
+
+  --risk-good:  #5FBE85;  --risk-good-bg:  #14241c;
+  --risk-warn:  #D9AD55;  --risk-warn-bg:  #2a2415;
+  --risk-bad:   #E0786F;  --risk-bad-bg:   #2c1a18;
+  --info:       #6FA0DA;  --info-bg:       #16243a;
+
+  --grid-line: rgba(255,255,255,.045);
+  color-scheme: dark;
 }
 
+/* ---------- ACCENT ---------- */
+:root, :root[data-accent="gold"] {
+  --accent:        #A9802F;
+  --accent-2:      #C9A24B;
+  --accent-soft:   #F3EAD3;
+  --accent-line:   #E3D2A6;
+  --accent-contrast:#1c1402;
+  --accent-glow:   rgba(169,128,47,.30);
+}
+:root[data-theme="dark"][data-accent="gold"],
+:root[data-theme="dark"]:not([data-accent="indigo"]) {
+  --accent:        #D9B25A;
+  --accent-2:      #E8C878;
+  --accent-soft:   #2a2415;
+  --accent-line:   #4a3d1d;
+  --accent-contrast:#1c1402;
+  --accent-glow:   rgba(217,178,90,.30);
+}
+:root[data-accent="indigo"] {
+  --accent:        #5B5BD6;
+  --accent-2:      #7C7CF0;
+  --accent-soft:   #ECECFB;
+  --accent-line:   #D2D2F4;
+  --accent-contrast:#ffffff;
+  --accent-glow:   rgba(91,91,214,.32);
+}
+:root[data-theme="dark"][data-accent="indigo"] {
+  --accent:        #8B8BF5;
+  --accent-2:      #A6A6FB;
+  --accent-soft:   #1c1d3a;
+  --accent-line:   #34356a;
+  --accent-contrast:#0a0f1d;
+  --accent-glow:   rgba(139,139,245,.34);
+}
+
+/* ============================================================
+   @theme — map existing MVP Tailwind utility names onto the
+   runtime CSS variables above. `inline` keeps var() references
+   live, so they re-resolve on data-theme / data-accent change:
+   bg-paper / text-muted / shadow-soft / bg-gold etc. theme
+   automatically with zero per-module edits.
+   ============================================================ */
+@theme inline {
+  --color-ink:    var(--text);
+  --color-muted:  var(--text-2);
+  --color-faint:  var(--text-3);
+  --color-paper:  var(--surface);
+  --color-mist:   var(--surface-2);
+  --color-cream:  var(--bg);
+  --color-inset:  var(--inset);
+  --color-line:   var(--border);
+  --color-rule:   var(--border-2);
+  --color-gold:   var(--accent);
+  --color-teal:   var(--accent);
+  --color-coral:  var(--accent);
+  --color-accent: var(--accent);
+  --color-good:   var(--risk-good);
+  --color-warn:   var(--risk-warn);
+  --color-bad:    var(--risk-bad);
+  --color-info:   var(--info);
+
+  --shadow-soft:   var(--shadow);
+  --shadow-lifted: var(--shadow-lg);
+
+  --radius-sm: var(--r-sm);
+  --radius:    var(--r);
+  --radius-lg: var(--r-lg);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
 body {
-  min-height: 100vh;
-  margin: 0;
-  background:
-    radial-gradient(1200px 700px at 12% -8%, #fdf7ec 0%, rgba(253, 251, 247, 0) 60%),
-    radial-gradient(1100px 800px at 100% 0%, #f6f3fb 0%, rgba(253, 251, 247, 0) 55%),
-    var(--bg);
-  color: var(--text);
-  font-family:
-    "Plus Jakarta Sans",
-    "Segoe UI",
-    system-ui,
-    sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
+/* Themed surface lives on a wrapper div (.app-shell) so runtime theme toggles
+   re-resolve var() correctly. html bg covers overscroll. */
+html {
+  background: var(--bg);
+  transition: background-color .4s var(--ease);
 }
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+.app-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
+  color: var(--text);
+  transition: background-color .4s var(--ease), color .4s var(--ease);
 }
+#root { min-height: 100%; }
 
+h1,h2,h3,h4 { font-family: var(--font-serif); font-weight: 600; letter-spacing: -.01em; margin: 0; }
+.mono { font-family: var(--font-mono); }
+
+::selection { background: var(--accent-glow); }
+
+/* scrollbars */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 20px; border: 3px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: var(--text-3); background-clip: padding-box; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* utility */
 .kicker {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
   color: var(--text-3);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
+}
+button { font-family: inherit; cursor: pointer; }
+input, textarea, select { font-family: inherit; }
+a { color: inherit; }
+
+/* ---------- careeros animations ---------- */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-soft { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pop-in { 0% { opacity:0; transform: scale(.94); } 100% { opacity:1; transform: scale(1); } }
+@keyframes greenflash {
+  0%   { background: var(--risk-good-bg); box-shadow: inset 3px 0 0 var(--risk-good); }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+@keyframes dot-bounce { 0%,80%,100% { transform: translateY(0); opacity:.4; } 40% { transform: translateY(-5px); opacity:1; } }
+@keyframes ring-draw { from { stroke-dashoffset: var(--circ); } }
+@keyframes heat-breathe { 0%,100% { opacity: .72; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes sheen { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes confetti-fall {
+  0%   { transform: translateY(-10vh) rotate(0); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
 
+.anim-fade-up { animation: fade-up .5s var(--ease) both; }
+.anim-pop { animation: pop-in .35s var(--ease-spring) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* ============================================================
+   MVP-specific styles (Leaflet maps, career map markers/paths,
+   login hero) — preserved from original MVP globals.css,
+   retokenised onto the design-system variables.
+   ============================================================ */
 .leaflet-container {
-  background: #e8eff7;
+  background: var(--info-bg);
   font-family: inherit;
 }
 
 .career-map-marker {
   align-items: center;
   background: var(--surface);
-  border: 2px solid #fffefb;
+  border: 2px solid var(--surface);
   border-radius: 999px;
-  box-shadow: 0 8px 18px rgba(40, 32, 12, .18);
+  box-shadow: var(--shadow);
   color: var(--text);
   display: inline-flex;
   font-size: 12px;
@@ -89,12 +252,12 @@ textarea {
 .career-map-marker.is-selected {
   background: var(--accent);
   border-color: var(--text);
-  color: #1c1402;
+  color: var(--accent-contrast);
 }
 
 .career-map-home {
   background: var(--text);
-  border: 2px solid #fffefb;
+  border: 2px solid var(--surface);
   border-radius: 999px;
   box-shadow: 0 0 0 14px rgba(20, 34, 61, .10), 0 0 0 28px rgba(20, 34, 61, .06);
   color: var(--surface);
@@ -107,7 +270,7 @@ textarea {
   animation: career-path-draw 1.4s ease both;
   fill: none;
   opacity: .38;
-  stroke: #a9802f;
+  stroke: var(--accent);
   stroke-dasharray: 10 7;
   stroke-linecap: round;
   stroke-width: .55;
@@ -139,69 +302,31 @@ textarea {
 }
 
 @keyframes career-path-draw {
-  from {
-    stroke-dashoffset: 100;
-  }
-
-  to {
-    stroke-dashoffset: 0;
-  }
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
 }
 
 @keyframes career-path-flow {
-  from {
-    stroke-dashoffset: 0;
-  }
-
-  to {
-    stroke-dashoffset: -34;
-  }
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -34; }
 }
 
 @keyframes career-node-rise {
-  from {
-    opacity: 0;
-    transform: translate(-50%, calc(-50% + 14px)) scale(.97);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)) scale(.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 @keyframes career-card-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes login-panel-rise {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(.985);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(20px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes login-card-float {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
 }
