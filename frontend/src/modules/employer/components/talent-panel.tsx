@@ -1,23 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { roleTalentBoards, talentMatches, type RoleTalentBoard, type TalentMatch } from "../employer-data";
+import { roleTalentBoards } from "../employer-data";
 import { CandidateDnaPanel, EmployerPageHeader, HeaderCard, InfoTile, InsightCard, MicroBar, MiniMetric, ScoreBar, TagList } from "./employer-ui";
+import { InterviewKit } from "./interview-kit";
 
 export function TalentMatchingPanel() {
-  const [roleBoards, setRoleBoards] = useState<RoleTalentBoard[]>(roleTalentBoards);
-  const [showCreateJob, setShowCreateJob] = useState(false);
-  const [jobDraft, setJobDraft] = useState({
-    title: "",
-    team: "",
-    location: "",
-    priority: "Active" as RoleTalentBoard["priority"],
-    openings: "1",
-    roleSignals: "",
-    hiringGoal: ""
-  });
   const [selectedRoleId, setSelectedRoleId] = useState(roleTalentBoards[0].id);
-  const selectedRole = roleBoards.find((role) => role.id === selectedRoleId) ?? roleBoards[0];
+  const selectedRole = roleTalentBoards.find((role) => role.id === selectedRoleId) ?? roleTalentBoards[0];
   const [selectedCandidateId, setSelectedCandidateId] = useState(selectedRole.applicants[0].id);
   const selectedCandidate =
     selectedRole.applicants.find((candidate) => candidate.id === selectedCandidateId) ?? selectedRole.applicants[0];
@@ -26,46 +16,6 @@ export function TalentMatchingPanel() {
     selectedRole.applicants.reduce((sum, candidate) => sum + candidate.interestSignal, 0) / selectedRole.applicants.length
   );
 
-  function createJob() {
-    const title = jobDraft.title.trim();
-    const team = jobDraft.team.trim();
-    const location = jobDraft.location.trim();
-    const hiringGoal = jobDraft.hiringGoal.trim();
-    const roleSignals = jobDraft.roleSignals
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    if (!title || !team || !location || !hiringGoal || roleSignals.length === 0) {
-      return;
-    }
-
-    const newRole = buildRoleBoard({
-      id: `role-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${roleBoards.length + 1}`,
-      title,
-      team,
-      location,
-      priority: jobDraft.priority,
-      openings: Math.max(1, Number(jobDraft.openings) || 1),
-      hiringGoal,
-      roleSignals
-    });
-
-    setRoleBoards((current) => [newRole, ...current]);
-    setSelectedRoleId(newRole.id);
-    setSelectedCandidateId(newRole.applicants[0].id);
-    setShowCreateJob(false);
-    setJobDraft({
-      title: "",
-      team: "",
-      location: "",
-      priority: "Active",
-      openings: "1",
-      roleSignals: "",
-      hiringGoal: ""
-    });
-  }
-
   return (
     <div>
       <EmployerPageHeader moduleId="talent" />
@@ -73,7 +23,7 @@ export function TalentMatchingPanel() {
         <HeaderCard
           label="Smart Talent Matching"
           title="Composite scoring across experience, skills, education, and intent"
-          detail="Each candidate is scored across multiple explainable dimensions so hiring teams can inspect profile evidence, Career DNA, missing signals, and likely role fit."
+          detail="Applicants stay with the role they submitted for. Review explainable evidence, gaps, and intent, then prepare a tailored interview kit in one click."
         />
         <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_390px]">
           <section className="grid gap-4">
@@ -82,107 +32,16 @@ export function TalentMatchingPanel() {
                 <div>
                   <p className="kicker">Open roles</p>
                   <h3 className="mt-2 font-serif text-2xl font-semibold text-ink">Each role has its own talent board</h3>
-                  <p className="mt-1 text-sm text-muted">Switch roles to inspect different candidate rankings, gaps, and intent signals.</p>
+                  <p className="mt-1 text-sm text-muted">Switch roles to inspect only the applicants who submitted for that vacancy—never reassigned silently.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full border border-line bg-mist px-3 py-1.5 text-sm font-semibold text-ink">
-                    {roleBoards.length} live roles
+                    {roleTalentBoards.length} live roles
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateJob((current) => !current)}
-                    className="rounded-full bg-ink px-4 py-1.5 text-sm font-semibold text-paper transition hover:bg-gold hover:text-[#1c1402]"
-                  >
-                    {showCreateJob ? "Close" : "Create job"}
-                  </button>
                 </div>
               </div>
-              {showCreateJob ? (
-                <div className="mt-4 grid gap-3 rounded-[16px] border border-line bg-mist p-4 xl:grid-cols-2">
-                  <label className="grid gap-2 text-sm font-semibold text-ink">
-                    Job title
-                    <input
-                      value={jobDraft.title}
-                      onChange={(event) => setJobDraft((current) => ({ ...current, title: event.target.value }))}
-                      placeholder="e.g. Solutions Architect"
-                      className="rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-ink">
-                    Team
-                    <input
-                      value={jobDraft.team}
-                      onChange={(event) => setJobDraft((current) => ({ ...current, team: event.target.value }))}
-                      placeholder="e.g. Enterprise Solutions"
-                      className="rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-ink">
-                    Location
-                    <input
-                      value={jobDraft.location}
-                      onChange={(event) => setJobDraft((current) => ({ ...current, location: event.target.value }))}
-                      placeholder="e.g. Kuala Lumpur"
-                      className="rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-ink">
-                    Openings
-                    <input
-                      value={jobDraft.openings}
-                      onChange={(event) => setJobDraft((current) => ({ ...current, openings: event.target.value }))}
-                      placeholder="1"
-                      className="rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-ink">
-                    Priority
-                    <select
-                      value={jobDraft.priority}
-                      onChange={(event) =>
-                        setJobDraft((current) => ({
-                          ...current,
-                          priority: event.target.value as RoleTalentBoard["priority"]
-                        }))
-                      }
-                      className="rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-                    >
-                      <option value="Urgent">Urgent</option>
-                      <option value="Active">Active</option>
-                      <option value="Pipeline">Pipeline</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-ink xl:col-span-2">
-                    Role signals
-                    <input
-                      value={jobDraft.roleSignals}
-                      onChange={(event) => setJobDraft((current) => ({ ...current, roleSignals: event.target.value }))}
-                      placeholder="Comma separated, e.g. client discovery, cloud, solution design"
-                      className="rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-ink xl:col-span-2">
-                    Hiring goal
-                    <textarea
-                      value={jobDraft.hiringGoal}
-                      onChange={(event) => setJobDraft((current) => ({ ...current, hiringGoal: event.target.value }))}
-                      placeholder="Describe what this role needs to achieve."
-                      className="min-h-24 rounded-[12px] border border-line bg-paper px-3 py-2 text-sm text-ink outline-none transition focus:border-gold"
-                    />
-                  </label>
-                  <div className="xl:col-span-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={createJob}
-                      className="rounded-[12px] bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-gold hover:text-[#1c1402]"
-                    >
-                      Add role and generate matches
-                    </button>
-                  </div>
-                </div>
-              ) : null}
               <div className="mt-4 grid gap-3 xl:grid-cols-3">
-                {roleBoards.map((role) => {
+                {roleTalentBoards.map((role) => {
                   const isSelected = role.id === selectedRole.id;
 
                   return (
@@ -214,7 +73,7 @@ export function TalentMatchingPanel() {
                         </span>
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-2">
-                        <InfoTile label="Openings" value={String(role.openings)} />
+                        <InfoTile label="Applicants" value={String(role.applicants.length)} />
                         <InfoTile label="Top match" value={`${Math.max(...role.applicants.map((candidate) => candidate.score))}%`} />
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
@@ -340,78 +199,12 @@ export function TalentMatchingPanel() {
                 </div>
               </section>
             </div>
+
+            <InterviewKit candidate={selectedCandidate} roleTitle={selectedRole.title} />
           </section>
           <CandidateDnaPanel candidate={selectedCandidate} ctaLabel="Invite to interview" />
         </div>
       </div>
     </div>
   );
-}
-
-function buildRoleBoard({
-  id,
-  title,
-  team,
-  location,
-  priority,
-  openings,
-  hiringGoal,
-  roleSignals
-}: {
-  id: string;
-  title: string;
-  team: string;
-  location: string;
-  priority: RoleTalentBoard["priority"];
-  openings: number;
-  hiringGoal: string;
-  roleSignals: string[];
-}) {
-  const keywords = `${title} ${team} ${roleSignals.join(" ")}`.toLowerCase();
-  const applicants = talentMatches
-    .map((candidate) => scoreCandidateForRole(candidate, keywords))
-    .sort((left, right) => right.score - left.score);
-
-  return {
-    id,
-    title,
-    team,
-    location,
-    priority,
-    openings,
-    hiringGoal,
-    roleSignals,
-    applicants
-  };
-}
-
-function scoreCandidateForRole(candidate: TalentMatch, keywords: string): TalentMatch {
-  const titleBoost =
-    includesAny(keywords, ["platform", "backend", "infrastructure", "cloud"]) && candidate.id === "tm-aishah"
-      ? 8
-      : includesAny(keywords, ["consult", "client", "solutions", "advisory"]) && candidate.id === "tm-daniel"
-        ? 8
-        : includesAny(keywords, ["product", "data", "analytics", "growth"]) && candidate.id === "tm-sara"
-          ? 8
-          : 0;
-  const adjacentBoost = candidate.careerInterests.some((interest) => keywords.includes(interest.toLowerCase().split(" ")[0])) ? 4 : 0;
-  const signalBoost = candidate.skills.filter((skill) => keywords.includes(skill.toLowerCase().split(" ")[0])).length * 2;
-  const score = Math.min(96, candidate.score + titleBoost + adjacentBoost + signalBoost - 4);
-
-  return {
-    ...candidate,
-    id: `${candidate.id}-${keywords.replace(/[^a-z0-9]+/g, "-").slice(0, 18)}`,
-    score,
-    skillFit: Math.max(68, Math.min(96, candidate.skillFit + titleBoost + signalBoost - 4)),
-    experienceFit: Math.max(68, Math.min(95, candidate.experienceFit + titleBoost + adjacentBoost - 3)),
-    educationFit: Math.max(68, Math.min(93, candidate.educationFit + adjacentBoost - 2)),
-    interestSignal: Math.max(72, Math.min(98, candidate.interestSignal + titleBoost + adjacentBoost)),
-    summary: `${candidate.summary} Match generated for ${keywords.includes("consult") ? "a client-facing" : "a role-specific"} requisition based on entered job signals.`,
-    mobilityIntent: `${candidate.mobilityIntent}. Role-specific fit generated from employer-created job signals.`,
-    highlights: [...candidate.highlights.slice(0, 2), `Matched to signals: ${keywords.split(" ").slice(0, 3).join(", ")}`]
-  };
-}
-
-function includesAny(source: string, terms: string[]) {
-  return terms.some((term) => source.includes(term));
 }

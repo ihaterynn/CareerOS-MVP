@@ -50,6 +50,117 @@ export type OnboardingPrediction = {
   drivers: string[];
 };
 
+export type OnboardingTaskType = "Automated" | "Manual" | "Document";
+export type OnboardingTaskStatus = "Done" | "In progress" | "Scheduled";
+
+export type OnboardingTask = {
+  title: string;
+  owner: string;
+  due: string;
+  type: OnboardingTaskType;
+  status: OnboardingTaskStatus;
+};
+
+export type OnboardingPhase = {
+  name: string;
+  window: string;
+  goal: string;
+  tasks: OnboardingTask[];
+};
+
+export type OnboardingWorkflow = {
+  hire: string;
+  role: string;
+  startDate: string;
+  manager: string;
+  buddy: string;
+  automatedCount: number;
+  totalCount: number;
+  phases: OnboardingPhase[];
+};
+
+/**
+ * Builds an automated onboarding workflow from a hire's prediction. Standard
+ * phases are auto-scaffolded; role-specific milestones are injected from the
+ * predictor so each new hire gets a tailored, mostly-automated plan.
+ */
+export function buildOnboardingWorkflow(prediction: OnboardingPrediction): OnboardingWorkflow {
+  const buddyByRole: Record<string, string> = {
+    "Platform Engineer": "Aisyah (Senior Platform)",
+    "Data Product Engineer": "Wei Sheng (Data Products)",
+    "Technical Consultant": "Aina (Advisory)"
+  };
+  const managerByRole: Record<string, string> = {
+    "Platform Engineer": "Farah Idris",
+    "Data Product Engineer": "Ravi Kumar",
+    "Technical Consultant": "Lydia Tan"
+  };
+  const manager = managerByRole[prediction.role];
+  const buddy = buddyByRole[prediction.role];
+
+  const phases: OnboardingPhase[] = [
+    {
+      name: "Pre-boarding",
+      window: "Day -5 → Day 0",
+      goal: "Everything ready before day one, without manual chasing.",
+      tasks: [
+        ...(manager ? [] : [{ title: "Assign hiring manager", owner: "HR Ops", due: "Day -5", type: "Manual" as const, status: "Scheduled" as const }]),
+        ...(buddy ? [] : [{ title: "Assign onboarding buddy", owner: "HR Ops", due: "Day -5", type: "Manual" as const, status: "Scheduled" as const }]),
+        { title: "Signed offer + tax and bank forms collected", owner: "HR Ops", due: "Day -5", type: "Document", status: "Done" },
+        { title: "Laptop + accounts provisioned (SSO, email, repos)", owner: "IT automation", due: "Day -3", type: "Automated", status: "Done" },
+        { title: "Role-based access + tooling licenses granted", owner: "IT automation", due: "Day -2", type: "Automated", status: "Done" },
+        { title: `Welcome pack + first-week agenda sent to ${prediction.hire.split(" ")[0]}`, owner: "Onboarding bot", due: "Day -1", type: "Automated", status: "Done" },
+        ...(buddy ? [{ title: `Onboarding buddy assigned: ${buddy}`, owner: "Onboarding bot", due: "Day -1", type: "Automated" as const, status: "Done" as const }] : [])
+      ]
+    },
+    {
+      name: "Week one",
+      window: "Day 1 → Day 5",
+      goal: "Orientation, environment, and first low-risk contribution.",
+      tasks: [
+        { title: "Company + team orientation session", owner: "HR Ops", due: "Day 1", type: "Manual", status: "In progress" },
+        { title: "Dev/work environment verified via setup checklist", owner: "Onboarding bot", due: "Day 2", type: "Automated", status: "In progress" },
+        { title: "Intro meetings auto-scheduled with 5 key collaborators", owner: "Onboarding bot", due: "Day 2", type: "Automated", status: "Scheduled" },
+        { title: "Shadow a live workflow with buddy", owner: buddyByRole[prediction.role] ?? "Onboarding buddy", due: "Day 4", type: "Manual", status: "Scheduled" }
+      ]
+    },
+    {
+      name: "First 30 days",
+      window: "Day 6 → Day 30",
+      goal: `Reach the first real milestone: ${prediction.nextMilestone.toLowerCase()}.`,
+      tasks: [
+        { title: `Milestone kickoff: ${prediction.nextMilestone}`, owner: manager ?? "Assignment needed", due: "Day 7", type: "Manual", status: "Scheduled" },
+        { title: "Stakeholder map + goals doc auto-generated for review", owner: "Onboarding bot", due: "Day 8", type: "Automated", status: "Scheduled" },
+        { title: "Weekly 1:1 cadence auto-created with manager", owner: "Onboarding bot", due: "Day 6", type: "Automated", status: "Scheduled" },
+        { title: `Targeted upskilling assigned for known ramp gap`, owner: "Onboarding bot", due: "Day 10", type: "Automated", status: "Scheduled" }
+      ]
+    },
+    {
+      name: "Ramp to impact",
+      window: `Day 31 → ${prediction.timeToImpact}`,
+      goal: `First tangible impact around ${prediction.timeToImpact}; de-risk early turnover.`,
+      tasks: [
+        { title: "Deliver first owned piece of work", owner: manager ?? "Assignment needed", due: prediction.timeToImpact, type: "Manual", status: "Scheduled" },
+        { title: "30/60 pulse check + sentiment survey", owner: "Onboarding bot", due: "Day 30 / 60", type: "Automated", status: "Scheduled" },
+        { title: "Ownership handoff + probation review scheduled", owner: "HR Ops", due: "Day 75", type: "Manual", status: "Scheduled" }
+      ]
+    }
+  ];
+
+  const allTasks = phases.flatMap((phase) => phase.tasks);
+
+  return {
+    hire: prediction.hire,
+    role: prediction.role,
+    startDate: "Mon, 3 Aug 2026",
+    manager: manager ?? "Assignment needed",
+    buddy: buddy ?? "Assignment needed",
+    automatedCount: allTasks.filter((task) => task.type === "Automated").length,
+    totalCount: allTasks.length,
+    phases
+  };
+}
+
 export type SkillHeatmapPoint = {
   skill: string;
   location: string;
@@ -97,6 +208,110 @@ export type RoleTalentBoard = {
   applicants: TalentMatch[];
 };
 
+export type InterviewQuestion = {
+  prompt: string;
+  probes: string;
+  lookFor: string;
+};
+
+export type InterviewKit = {
+  headline: string;
+  categories: Array<{
+    id: "role" | "personality" | "culture";
+    label: string;
+    basis: string;
+    questions: InterviewQuestion[];
+  }>;
+};
+
+/**
+ * Dynamic interview kit generator. In the prototype this is deterministic, but
+ * every question is derived from the candidate's own resume + Career DNA
+ * (skills, gaps, portfolio, DNA signals, interests) and the target role, so the
+ * output reads as if it were AI-generated per candidate.
+ */
+export function generateInterviewKit(candidate: TalentMatch, roleTitle: string): InterviewKit {
+  const topSkill = candidate.skills[0] ?? "your core stack";
+  const secondSkill = candidate.skills[1] ?? candidate.skills[0] ?? "an adjacent tool";
+  const gap = candidate.missingSignals[0] ?? "an area outside your current evidence";
+  const secondGap = candidate.missingSignals[1] ?? gap;
+  const project = candidate.portfolio[0] ?? "a recent project";
+  const interest = candidate.careerInterests[0] ?? "this direction";
+  const dnaTrait = candidate.dnaSignals[0] ?? "how you work";
+
+  return {
+    headline: `Generated from ${candidate.name.split(" ")[0]}'s resume, Career DNA, and the ${roleTitle} requirements.`,
+    categories: [
+      {
+        id: "role",
+        label: "Role & technical",
+        basis: `Anchored to ${topSkill}, ${secondSkill}, and the gaps flagged on this profile.`,
+        questions: [
+          {
+            prompt: `Walk me through "${project}". Which decisions would you make differently at ${roleTitle} scale?`,
+            probes: "Depth behind portfolio evidence, not just the headline result.",
+            lookFor: "Specific tradeoffs, metrics, and awareness of limits."
+          },
+          {
+            prompt: `Your profile is strong on ${topSkill} but lighter on ${gap}. How would you close that gap in your first 90 days here?`,
+            probes: `Self-awareness about the ${gap} gap and a credible ramp plan.`,
+            lookFor: "A concrete learning path rather than a vague promise."
+          },
+          {
+            prompt: `Design a small system that uses ${secondSkill} to handle a sudden 10x load. Where does it break first?`,
+            probes: "Applied depth and failure-mode thinking.",
+            lookFor: `Reasoning that connects ${secondSkill} to bottlenecks and mitigation.`
+          }
+        ]
+      },
+      {
+        id: "personality",
+        label: "Personality",
+        basis: `Built around the DNA signal "${dnaTrait}" and the ${secondGap} gap.`,
+        questions: [
+          {
+            prompt: "Tell me about a time you were wrong about a technical decision. How did you find out, and what changed after?",
+            probes: "Ego strength, feedback response, and growth mindset.",
+            lookFor: "Ownership without defensiveness; a changed behavior."
+          },
+          {
+            prompt: `Your DNA reads as "${dnaTrait}". When has that strength worked against you?`,
+            probes: "Honest self-modeling and ability to flex.",
+            lookFor: "A real example plus a compensating habit."
+          },
+          {
+            prompt: "Describe how you work when a problem has no obvious owner and everyone is busy.",
+            probes: "Initiative, resilience, and bias to action under ambiguity.",
+            lookFor: "Proactive framing rather than waiting for direction."
+          }
+        ]
+      },
+      {
+        id: "culture",
+        label: "Culture fit",
+        basis: `Cross-checked against stated interest in ${interest} and this candidate's mobility intent.`,
+        questions: [
+          {
+            prompt: `You've shown strong interest in ${interest}. How does this role fit the next three years you want?`,
+            probes: "Alignment between candidate intent and role reality.",
+            lookFor: "Motivation that this role genuinely serves, reducing flight risk."
+          },
+          {
+            prompt: "What does a healthy disagreement with a manager look like to you?",
+            probes: "Norms around feedback, hierarchy, and psychological safety.",
+            lookFor: "Direct but respectful; values evidence over seniority."
+          },
+          {
+            prompt: "When you join a new team, what's the first thing you do to earn trust?",
+            probes: "Collaboration style and onboarding instincts.",
+            lookFor: "Listening and small early wins over grand gestures."
+          }
+        ]
+      }
+    ]
+  };
+}
+
 export const employerModules: Array<NavigationItem<EmployerModuleId>> = [
   {
     id: "dashboard",
@@ -114,6 +329,11 @@ export const employerModules: Array<NavigationItem<EmployerModuleId>> = [
     description: "Composite candidate matching across skills, education, experience, and interests."
   },
   {
+    id: "ingestion",
+    label: "CV Ingestion",
+    description: "Run a submitted CV batch through validation, matching, and trusted-candidate aggregation."
+  },
+  {
     id: "retention",
     label: "Retention",
     description: "Explainable retention risk signals with candidate opt-out awareness."
@@ -121,7 +341,7 @@ export const employerModules: Array<NavigationItem<EmployerModuleId>> = [
   {
     id: "onboarding",
     label: "Onboarding",
-    description: "Success prediction, time to first impact, and ramp-risk metrics."
+    description: "Automated onboarding workflows with success prediction, milestones, and ramp-risk."
   },
   {
     id: "heatmap",
