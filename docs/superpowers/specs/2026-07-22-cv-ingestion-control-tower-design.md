@@ -19,16 +19,16 @@ The new page complements the existing Talent Match page: Talent Match is for rev
 | Interaction | One **Run ingestion** button advances the whole batch through the pipeline |
 | Hiring context | Multiple active roles: Senior Product Designer, Backend Engineer, and Data Analyst |
 | Demo batch | 24 records, including valid, incomplete, duplicate, and low-match submissions |
-| Output | Gold records aggregated by role, skill cluster, and location |
+| Output | Gold records grouped by underlying evidence patterns: skill cluster, experience band, location, and common gaps |
 
 ## Experience
 
 The page opens in a ready state: it already contains a representative batch and shows how each medallion layer will reduce and enrich it. The main action, **Run ingestion**, starts a short staged animation:
 
-1. **Bronze — Submitted:** all 24 raw extracted records enter. The panel exposes source name, parse status, and a compact JSON preview for the selected record.
+1. **Bronze — Submitted:** all 24 raw extracted records enter. The panel exposes source name, parse status, and a compact submission-evidence preview for the selected record.
 2. **Silver — Validated:** malformed, duplicate, and incomplete records are separated with specific reasons. Valid records are normalised into a consistent candidate schema.
-3. **Gold — Qualified:** validated CVs are scored against their best-matching open role. Only records meeting the configured threshold enter the trusted shortlist.
-4. **Aggregate:** Gold candidates are grouped by role, shared skill cluster, and location. The result provides a clear hand-off into recruiting review.
+3. **Gold — Qualified:** validated CVs remain attached to the role they were submitted for. Only records meeting the configured threshold enter the trusted shortlist.
+4. **Aggregate:** Gold candidates are grouped by patterns that help the recruiter act: shared skill cluster, experience band, location, and recurring missing evidence. The result provides a clear hand-off into the role’s recruiting review.
 
 The UI remains useful before and after the run. During the animation, counters advance, a single selected record updates its status, and stage cards receive restrained motion. After completion, the Gold aggregation becomes the visual focal point and the action changes to **Run again**.
 
@@ -44,8 +44,8 @@ Employer workspace / CV Ingestion
 │  24 received            18 validated             11 qualified   │
 │  raw record list         invalid reasons          ranked people  │
 ├──────────────────────────────┬──────────────────────────────────┤
-│ Selected extracted CV JSON   │ Gold candidate aggregation        │
-│ structured mock preview      │ role / skills / location toggles │
+│ Selected submission evidence │ Gold candidate cohorts            │
+│ structured mock preview      │ skills / experience / location / gaps │
 │ parse & validation trace     │ aggregate cards + people list    │
 └──────────────────────────────┴──────────────────────────────────┘
 ```
@@ -62,14 +62,22 @@ The implementation stays local to the employer frontend:
 - `ingestion-panel.tsx` owns the demo state: idle/running/complete, active layer, selected record, and aggregation grouping.
 - A new route renders the panel, and employer navigation gains one item for **CV Ingestion**.
 
+### Demo handoff
+
+Gold emits a role-preserving **candidate-review record** for Talent Match: candidate identity, submitted role, evidence, qualification score, and validation trace. In this demo, CV Ingestion and Talent Match use separate deterministic fixtures rather than a live shared store; the shared record is the explicit product boundary for a future API.
+
 Each CV record includes only the fields required to make the demo believable: identity, source filename, extracted skills, years of experience, location, target role, education, parse confidence, and any validation/matching explanation. No personal documents or real candidate data are used.
 
 ### Qualification rules
 
 - Bronze accepts every submitted mock record.
 - Silver rejects records with missing name/contact, failed extraction, duplicate fingerprint, or insufficient core fields.
-- Gold assigns each Silver record to its best-matching open role, using deterministic skill and experience fit. A record must score at least 70 to qualify.
+- Gold evaluates each Silver record against the role named on its submission, using deterministic skill and experience fit. A record must score at least 70 to qualify.
 - Aggregations use Gold records only, so every displayed total is explainable.
+
+### Gold score (demo)
+
+The score is deterministic and explainable: `42 + 15 × required skills evidenced + 3 × years of experience`, capped at 98. The fixed fixture is tested to yield 24 Bronze, 18 Silver, and 11 Gold records; the counts are an outcome of the rules, not independent display constants.
 
 ## States and Accessibility
 
