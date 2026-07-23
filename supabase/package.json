@@ -1,0 +1,13 @@
+{
+  "name": "@careeros/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "supabase start",
+    "stop": "supabase stop",
+    "reset": "supabase db reset",
+    "status": "supabase status",
+    "gen-types": "supabase gen types typescript --local > ../packages/shared/src/types.ts",
+    "deploy": "supabase link --project-ref $SUPABASE_PROJECT_REF && supabase db push"
+  }
+}

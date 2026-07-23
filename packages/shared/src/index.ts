@@ -33,8 +33,5 @@ export type EmployerSnapshot = {
   riskAlerts: number;
 };
 
-export const apiRoutes = {
-  health: "/api/health",
-  candidate: "/api/candidate",
-  employer: "/api/employer"
-} as const;
+export { createSupabaseClient, createSupabaseAdmin } from "./supabase";
+export type { Database } from "./supabase";
