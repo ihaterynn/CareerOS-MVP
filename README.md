@@ -1,13 +1,12 @@
 # CareerOS
 
-CareerOS is a monorepo with a TypeScript Next.js + Tailwind frontend and a Python API backend.
+CareerOS is a monorepo with a TypeScript Next.js + Tailwind frontend.
 
 Prototype URL: https://careeros-mvp-phi.vercel.app/
 
 ## Workspaces
 
 - `frontend` - Next.js app router frontend for candidate/user and employer/admin modules.
-- `backend` - Python FastAPI skeleton.
 - `packages/shared` - Shared domain types and constants.
 
 ## Product Views
@@ -99,13 +98,10 @@ CareerOS currently ships two main frontend views:
 
 ```bash
 npm install
-npm run install:backend
-npm run dev:frontend
-npm run dev:backend
+npm run dev
 ```
 
 The frontend defaults to `http://localhost:3000`.
-The backend defaults to `http://localhost:4000`.
 
 ## Deploying Frontend to Vercel
 
