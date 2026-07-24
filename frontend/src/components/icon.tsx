@@ -37,6 +37,9 @@ import {
   MapPin,
   TriangleAlert,
   Info,
+  KanbanSquare,
+  Dna,
+  FilePenLine,
   type LucideIcon
 } from "lucide-react";
 
@@ -84,7 +87,10 @@ const ICONS = {
   edit: Pencil,
   pin: MapPin,
   alert: TriangleAlert,
-  info: Info
+  info: Info,
+  kanban: KanbanSquare,
+  dna: Dna,
+  filePen: FilePenLine
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

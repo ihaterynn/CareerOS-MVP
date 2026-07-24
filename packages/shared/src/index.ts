@@ -1,6 +1,9 @@
 export type Portal = "candidate" | "employer";
 
-export type CandidateModuleId = "dashboard" | "dna" | "jobs" | "career-path" | "jobby" | "applications";
+export type CandidateModuleId =
+  | "tracker"
+  | "dna"
+  | "studio";
 
 export type EmployerModuleId =
   | "dashboard"

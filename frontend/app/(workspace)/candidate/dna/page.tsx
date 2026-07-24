@@ -1,10 +1,7 @@
-import { CandidateDnaPanel } from "@/modules/candidate/components/candidate-dna-panel";
-import { CandidateHeader } from "@/modules/candidate/candidate-header";
+import { getDnaData } from "@/modules/candidate/dna/queries";
+import { DnaPanel } from "@/modules/candidate/dna/components/dna-panel";
 
-export default function Page() {
-  return (
-    <CandidateHeader>
-      <CandidateDnaPanel />
-    </CandidateHeader>
-  );
+export default async function DnaPage() {
+  const data = await getDnaData();
+  return <DnaPanel data={data} />;
 }
