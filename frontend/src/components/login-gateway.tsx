@@ -3,6 +3,7 @@
 import { ArrowRight, BriefcaseBusiness, Building2, CheckCircle2, Compass, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { shellNav } from "./nav-config";
 
 const demoCredentials = {
   email: "demo@careeros.ai",
@@ -10,15 +11,15 @@ const demoCredentials = {
 };
 
 const credibilityPoints = [
-  "University-ready candidate pipelines",
-  "Explainable matching and fair-pay signals",
-  "AI-assisted resume generation and quick apply"
+  "Explainable talent matching for every open role",
+  "Career Twin paths and fair-pay signals for candidates",
+  "AI interview kits and automated onboarding for hiring teams"
 ];
 
 const spotlightStats = [
-  { label: "Universities", value: "12" },
   { label: "Employer partners", value: "148" },
-  { label: "Candidate matches", value: "24k" }
+  { label: "Candidate matches", value: "24k" },
+  { label: "Avg. match score", value: "89%" }
 ];
 
 export function LoginGateway() {
@@ -46,13 +47,13 @@ export function LoginGateway() {
             </div>
 
             <div className="mt-10 max-w-2xl">
-              <p className="kicker text-[#d7c899]">Holistic platform for universities, employers, and candidates</p>
+              <p className="kicker text-[#d7c899]">One operating system for candidates and employers</p>
               <h1 className="mt-3 font-serif text-5xl font-semibold leading-[1.02] tracking-[-0.03em] text-white sm:text-6xl">
                 Talent movement with structure, not guesswork.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-[#dbe4f3]">
-                Candidate DNA, career path navigation, fair-pay signals, employer dashboards, and
-                demo-ready quick apply workflows in one operating system.
+                Candidate DNA, Career Twin paths, and fair-pay signals on one side. Explainable
+                matching, AI interview kits, and automated onboarding on the other.
               </p>
             </div>
           </div>
@@ -128,7 +129,7 @@ export function LoginGateway() {
                 className="mt-6 grid gap-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  router.push("/candidate/dashboard");
+                  router.push(shellNav.candidate.defaultHref);
                 }}
               >
                 <label className="block">

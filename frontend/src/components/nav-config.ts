@@ -1,13 +1,12 @@
 import {
-  BrainCircuit,
-  Bot,
   ChartNoAxesCombined,
   ClipboardCheck,
   ClipboardList,
   Database,
+  Dna,
+  FilePenLine,
   Flame,
-  GitBranch,
-  LayoutDashboard,
+  KanbanSquare,
   LineChart,
   MapPinned,
   Network,
@@ -19,12 +18,9 @@ import { employerModules } from "@/modules/employer/employer-data";
 import type { ShellNav, ShellNavItem } from "./workspace-shell";
 
 const candidateIcons: Record<CandidateModuleId, ShellNavItem["icon"]> = {
-  dashboard: LayoutDashboard,
-  dna: BrainCircuit,
-  jobs: MapPinned,
-  "career-path": GitBranch,
-  jobby: Bot,
-  applications: ClipboardList
+  tracker: KanbanSquare,
+  dna: Dna,
+  studio: FilePenLine
 };
 
 const employerIcons: Record<EmployerModuleId, ShellNavItem["icon"]> = {
@@ -54,6 +50,6 @@ const employerItems: ShellNavItem[] = employerModules.map((m) => ({
 }));
 
 export const shellNav: ShellNav = {
-  candidate: { title: "My Career", items: candidateItems, defaultHref: "/candidate/dashboard" },
+  candidate: { title: "My Career", items: candidateItems, defaultHref: "/candidate/tracker" },
   employer: { title: "Cempaka Digital", items: employerItems, defaultHref: "/employer/dashboard" }
 };

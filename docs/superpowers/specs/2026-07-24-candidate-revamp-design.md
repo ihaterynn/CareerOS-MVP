@@ -22,8 +22,8 @@ Scope decisions (confirmed):
 
 ## 0. Monolith migration — remove the Python backend
 
-The repo currently carries a thin Python FastAPI skeleton (`backend/`, ~63 LOC: health + two stub
-routes). It is **unused** — the frontend never calls it, and the only reference (`apiRoutes` in
+The repo currently carries a thin Python FastAPI skeleton (`backend/`: health + two stub routes).
+It is **unused** — the frontend never calls it, and the only reference (`apiRoutes` in
 `packages/shared`) is dead code (self-reference + one mention in an old spec). Going monolithic is a
 clean deletion, no runtime dependency to sever.
 
@@ -32,9 +32,50 @@ Delete / strip:
 - `packages/shared/src/index.ts`: remove the dead `apiRoutes` const (grep-verify no live import).
 - Root `package.json` scripts: drop `dev:backend`, `install:backend`, `check:backend`. `build`,
   `lint`, `typecheck` already run over workspaces (`packages/*`, `frontend`) — leave them.
-- `Makefile`: `dev` runs frontend only; drop the `backend` target + the `install:backend` line.
-- `README.md`: rewrite the "Python FastAPI backend / localhost:4000" language to describe the
+- `Makefile` — exact result:
+  ```makefile
+  .PHONY: install dev frontend
+  install:
+  	npm install
+  frontend:
+  	npm run dev:frontend
+  dev:
+  	npm run dev:frontend
+  ```
+  (remove `backend` from `.PHONY` and as a target; `install` runs `npm install` only, no
+  `install:backend`; `dev` runs the frontend command only, no backgrounded backend.)
+- `README.md`: rewrite the "Python FastAPI backend / localhost:4000" language (top-line description,
+  `backend` bullet, `install:backend`/`dev:backend` steps, localhost:4000 note) to describe the
   Next.js-only server layer (Server Actions + Route Handlers + Supabase). No Python setup steps.
+
+**Stale authoritative docs (update in the same sweep — they still describe FastAPI/`apiRoutes` and
+will misdirect implementation):**
+- `Candidate Frontend Revamp Directions/INTEGRATION_PROMPT.md:4` — the build brief still names
+  ``backend` = Python/FastAPI skeleton`. Update to state the monolithic all-TypeScript architecture
+  (Next.js server layer + Supabase, no Python service).
+- `docs/superpowers/specs/2026-06-15-careeros-design-merge-design.md:13` — the June design spec
+  describes the FastAPI `backend` workspace + `apiRoutes`. Add a top-of-file **`> SUPERSEDED`**
+  note pointing to this spec + §0; that spec's design is otherwise done, so mark, don't rewrite.
+
+### 0.1 Next / Supabase server boundary (define explicitly)
+
+"Server-side" throughout §7 means the Next.js server runtime — never the browser bundle. Concrete
+boundary:
+- **Server-only env vars** (never `NEXT_PUBLIC_`, never imported into a client component):
+  `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, and any signing/export secrets. Read only in
+  `queries.ts`/`actions.ts`/Route Handlers. A lint guard (or `server-only` package import) on the
+  admin-client module prevents accidental client import.
+- **Browser-safe public config:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` only.
+- **Two Supabase clients:**
+  - *Server request client* (`@supabase/ssr`) — anon key + the user's cookies, RLS-enforced as the
+    logged-in candidate. Used for all normal candidate reads/writes in Server Components + Actions.
+  - *Server admin client* — service-role key, **RLS-bypassing**, `import "server-only"` at top.
+    Used ONLY where a policy can't express the need: the public DNA-share-token lookup (§7.2) and
+    the backend company-promotion job. Never for candidate-scoped reads.
+- **Session/cookie wiring:** Supabase Auth via `@supabase/ssr` cookie handlers in
+  `middleware.ts` (refresh) + a server client factory; Server Actions/Handlers call
+  `supabase.auth.getUser()` and reject unauthenticated calls before any data access. No client holds
+  a service-role key or another user's session.
 
 All server-side work in §7 (data reads, mutations, LLM streaming, export, auth/RLS) lives in the
 Next.js app: typed reads in `queries.ts` (server), mutations in `actions.ts` (`"use server"`),
@@ -431,7 +472,9 @@ authenticated employer access.
   looks up a valid (non-revoked, non-expired) link via a **service-role read**, returning only whitelisted
   summary fields — it does **not** rely on a permissive RLS SELECT on `dna_profiles`. RLS on
   `dna_profiles` itself stays owner-only for SELECT; token access is server-mediated. Revoking a
-  link sets `revoked_at`; the page 404s thereafter.
+  link sets `revoked_at`; the page 404s thereafter. **The public share route/page must be
+  non-cacheable** (`runtime = "nodejs"`, `dynamic = "force-dynamic"`, `Cache-Control: no-store`, no
+  ISR/`revalidate`) — a cached response would keep serving a revoked link's DNA after revocation.
 - All three: `dna_profiles` remains **owner-writable only**. "Manage sharing" in the Profile tab
   drives grants/links/revocation through `setVisibility` + grant/revoke actions (§7.4).
 
@@ -472,6 +515,15 @@ raw share URL only at creation time; subsequent reads expose link metadata, neve
   `frontend/app/api/candidate/studio/chat/route.ts`, not a Server Action return value; the mock
   chat uses a local delayed reply. The route authenticates the candidate, validates `ChatInput`,
   rate-limits before invoking the provider, and streams only text/proposed suggestions.
+- **Route Handler requirements (chat + export):** declare `export const runtime = "nodejs"`
+  (the streaming client, PDF/DOCX builders, and Node stdlib are not Edge-safe) and
+  `export const dynamic = "force-dynamic"`; set `Cache-Control: no-store` on the response. Streamed
+  and token-gated responses must never be cached at any layer.
+- **Distributed rate limiting (required — not in-memory):** an in-process/in-memory limiter does
+  not hold across serverless instances (each cold start resets it). Use a shared store keyed by
+  `auth.uid()`: a Postgres/Supabase counter table with atomic upsert + windowed check, or a hosted
+  KV/Redis limiter (e.g. Upstash). A KV/Redis vendor is a usage-billed dependency — ask before
+  adding (see dependency gate below). Default to the Supabase-counter approach to avoid a new vendor.
 - **Résumé parser** — server parser + LLM structuring pass → `resume_sections` JSON.
 - **Assessment scoring** — **blocked on a named, approved instrument** (see §5): license MBTI/DISC/
   Enneagram, or adopt an open alternative (e.g. IPIP Big Five) and relabel the UI. Requires
@@ -528,7 +580,13 @@ PDF/DOCX generation, scraping, or assessment providers).
   `frontend/app/(workspace)/employer/` or `frontend/src/modules/employer/`.
 - Monolith: `backend/` gone; no `dev:backend`/`install:backend`/`check:backend` scripts remain;
   no live import of the removed `apiRoutes`; `npm run build/lint/typecheck` green over
-  `packages/*` + `frontend` only; README has no Python/uvicorn/localhost:4000 references.
+  `packages/*` + `frontend` only; README, `INTEGRATION_PROMPT.md`, and the June spec have no live
+  Python/FastAPI/uvicorn/localhost:4000/`apiRoutes` guidance (June spec marked SUPERSEDED);
+  Makefile matches §0 exactly (`.PHONY: install dev frontend`, no backend).
+- Server boundary: service-role/OpenRouter keys never in a client bundle or `NEXT_PUBLIC_` var;
+  admin client is `import "server-only"`; chat/export/public-share routes declare
+  `runtime="nodejs"` + `dynamic="force-dynamic"` + `no-store`; rate limiter uses a shared store,
+  not in-memory.
 - All three routes render with `loading`/`error`/empty states.
 - Reduced-motion: animations gated (verify `.anim-slide` covered by `*` rule).
 - Interactions match ref: board drag moves stage (drop→closed sets rejected), accept green-flashes
