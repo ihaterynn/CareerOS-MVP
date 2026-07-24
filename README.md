@@ -2,7 +2,7 @@
 
 CareerOS is a monorepo with a TypeScript Next.js + Tailwind frontend.
 
-Prototype URL: https://careeros-mvp-phi.vercel.app/
+Prototype URL: https://careeros-prototype.vercel.app/
 
 ## Workspaces
 
