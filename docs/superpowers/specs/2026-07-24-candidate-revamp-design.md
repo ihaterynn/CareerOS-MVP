@@ -17,6 +17,30 @@ Scope decisions (confirmed):
 - FE: all 3 screens, full parity.
 - Data: in-file typed mock exports (no Supabase calls this session).
 - Backend specs written now: Supabase schema/RLS/enums, server actions + Zod, LLM/agent + export services.
+- **Monolithic, all-TypeScript.** No separate Python service. The entire backend is the Next.js
+  server layer (Server Components, Server Actions, Route Handlers) talking to Supabase. See §0.
+
+## 0. Monolith migration — remove the Python backend
+
+The repo currently carries a thin Python FastAPI skeleton (`backend/`, ~63 LOC: health + two stub
+routes). It is **unused** — the frontend never calls it, and the only reference (`apiRoutes` in
+`packages/shared`) is dead code (self-reference + one mention in an old spec). Going monolithic is a
+clean deletion, no runtime dependency to sever.
+
+Delete / strip:
+- `backend/` directory (FastAPI skeleton, requirements.txt, pyproject.toml, .env.example, README).
+- `packages/shared/src/index.ts`: remove the dead `apiRoutes` const (grep-verify no live import).
+- Root `package.json` scripts: drop `dev:backend`, `install:backend`, `check:backend`. `build`,
+  `lint`, `typecheck` already run over workspaces (`packages/*`, `frontend`) — leave them.
+- `Makefile`: `dev` runs frontend only; drop the `backend` target + the `install:backend` line.
+- `README.md`: rewrite the "Python FastAPI backend / localhost:4000" language to describe the
+  Next.js-only server layer (Server Actions + Route Handlers + Supabase). No Python setup steps.
+
+All server-side work in §7 (data reads, mutations, LLM streaming, export, auth/RLS) lives in the
+Next.js app: typed reads in `queries.ts` (server), mutations in `actions.ts` (`"use server"`),
+streaming/agent + export in Route Handlers under `frontend/app/api/candidate/**`. Supabase is the
+only external data plane. This deletion is a prerequisite step (phase 1, §9) — do it before the
+route swap so the tree is clean.
 
 **Dependency prerequisite:** add `zod` now and write `schema.ts` files as real runtime validators
 for the mock actions. `zod` is not in `frontend/package.json`; it is not a paid dependency.
@@ -486,7 +510,9 @@ PDF/DOCX generation, scraping, or assessment providers).
 
 ## 9. Phasing (this session ships FE parity; backend stubbed)
 
-1. Nav/route swap + shared enum + `slide-in` keyframe + icon registrations.
+1. **Monolith migration (§0)** — delete `backend/`, dead `apiRoutes`, backend scripts/Makefile
+   targets, rewrite README — then nav/route swap + shared enum + `slide-in` keyframe + icon
+   registrations.
 2. Tracker (full UI parity, drag, drawer, analytics, add-modal, optimistic mock moves).
 3. DNA (profile + assessments flow + consent).
 4. Studio (editor + review-queue accept/flash + agent chat mock stream + export toast).
@@ -500,6 +526,9 @@ PDF/DOCX generation, scraping, or assessment providers).
   through nav-config's `Record`).
 - Employer routes/components unchanged: the candidate change set contains no files under
   `frontend/app/(workspace)/employer/` or `frontend/src/modules/employer/`.
+- Monolith: `backend/` gone; no `dev:backend`/`install:backend`/`check:backend` scripts remain;
+  no live import of the removed `apiRoutes`; `npm run build/lint/typecheck` green over
+  `packages/*` + `frontend` only; README has no Python/uvicorn/localhost:4000 references.
 - All three routes render with `loading`/`error`/empty states.
 - Reduced-motion: animations gated (verify `.anim-slide` covered by `*` rule).
 - Interactions match ref: board drag moves stage (drop→closed sets rejected), accept green-flashes
