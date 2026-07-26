@@ -85,7 +85,9 @@ export function OnboardingPanel({ data }: { data: OnboardingData }) {
   useEffect(() => {
     if (records.length <= 1) return;
     const id = setTimeout(() => {
-      void saveTranscript(records);
+      // Swallow rejections: this fires on a debounce and can land after the candidate has
+      // navigated away, and an unhandled rejection there surfaces as a page error.
+      saveTranscript(records).catch(() => {});
     }, 900);
     return () => clearTimeout(id);
   }, [records]);
@@ -125,7 +127,7 @@ export function OnboardingPanel({ data }: { data: OnboardingData }) {
         }
 
         if (!askedIds.has("turn-dna")) {
-          void requestDna();
+          requestDna().catch((error) => setToast(errorText(error)));
           return;
         }
 
@@ -239,31 +241,20 @@ export function OnboardingPanel({ data }: { data: OnboardingData }) {
         throw new Error(body?.error ?? `Couldn't draft your DNA (${response.status})`);
       }
 
-      let draft: { summaryMd: string; bestFit: Array<{ role: string; level: string }> } | null = null;
+      type DnaDone = { summaryMd: string; bestFit: Array<{ role: string; level: string }>; facts: Fact[] };
+      let draft: DnaDone | null = null;
       await readStream<DnaStreamEvent>(response, (event) => {
-        if (event.type === "done") draft = { summaryMd: event.summaryMd, bestFit: event.bestFit };
-        else if (event.type === "error") throw new Error(event.message);
+        if (event.type === "done") {
+          draft = { summaryMd: event.summaryMd, bestFit: event.bestFit, facts: event.facts };
+        } else if (event.type === "error") throw new Error(event.message);
       });
 
       if (!draft) throw new Error("No summary came back");
-      const resolved = draft as { summaryMd: string; bestFit: Array<{ role: string; level: string }> };
+      const resolved = draft as DnaDone;
       setDnaDraft(resolved);
-      setFacts((prev) =>
-        prev.some((f) => f.key === "dna.summary")
-          ? prev
-          : [
-              ...prev,
-              {
-                id: "fact-dna.summary",
-                dimension: "dna",
-                key: "dna.summary",
-                label: "DNA summary",
-                value: resolved.summaryMd,
-                source: "inferred",
-                confidence: 0.8
-              }
-            ]
-      );
+      // Adopt the server's ledger. Minting a fact id here would leave the client holding an id
+      // that does not exist in the database, and the later confirm would silently no-op.
+      setFacts(resolved.facts);
       push({
         id: "turn-dna",
         kind: "dna",
@@ -303,15 +294,20 @@ export function OnboardingPanel({ data }: { data: OnboardingData }) {
 
     if (turn.kind === "dna") {
       setBusy(true);
-      const [visibilityResult, confirmResult] = await Promise.all([
-        setDnaVisibility({ visibility }),
-        confirmFacts({ factIds: facts.filter((f) => f.key === "dna.summary").map((f) => f.id) })
-      ]);
-      setBusy(false);
+      // Sequential, not parallel: both writes go through the same append-only ledger RPC, and
+      // interleaving two supersede-then-insert cycles is asking for trouble.
+      const visibilityResult = await setDnaVisibility({ visibility });
       if (!visibilityResult.ok) {
+        setBusy(false);
         setToast(visibilityResult.error);
         return;
       }
+      const summaryIds = visibilityResult.data.facts
+        .filter((fact) => fact.key === "dna.summary")
+        .map((fact) => fact.id);
+      const confirmResult = await confirmFacts({ factIds: summaryIds });
+      setBusy(false);
+
       const next = applyPatch(confirmResult.ok ? confirmResult.data : visibilityResult.data);
       settle(visibility === "private" ? "Keep it private" : `Shared: ${visibility}`);
       advance(next, askedIdsWith());
@@ -393,11 +389,12 @@ export function OnboardingPanel({ data }: { data: OnboardingData }) {
   };
 
   const handlers: ConversationHandlers = {
-    onAnswer: (value) => void handleAnswer(value),
-    onEditFact: (factId, value) => void handleEditFact(factId, value),
-    onEditSummary: (summary) => void handleEditSummary(summary),
+    // `void` does not catch — each of these is async and must swallow its own rejection.
+    onAnswer: (value) => { handleAnswer(value).catch((e) => setToast(errorText(e))); },
+    onEditFact: (factId, value) => { handleEditFact(factId, value).catch((e) => setToast(errorText(e))); },
+    onEditSummary: (summary) => { handleEditSummary(summary).catch(() => {}); },
     onRequestVisibility: handleRequestVisibility,
-    onComplete: () => void complete()
+    onComplete: () => { complete().catch((e) => setToast(errorText(e))); }
   };
 
   const started = records.length > 1 || records[0]?.status === "answered";
@@ -431,7 +428,9 @@ export function OnboardingPanel({ data }: { data: OnboardingData }) {
           <div style={{ marginTop: 18, marginLeft: 39 }}>
             <IntakeDropzone
               busy={busy}
-              onStart={(kind, payload, file) => void start(kind, payload, file)}
+              onStart={(kind, payload, file) => {
+                start(kind, payload, file).catch((e) => setToast(errorText(e)));
+              }}
             />
           </div>
         ) : null}
@@ -443,7 +442,9 @@ export function OnboardingPanel({ data }: { data: OnboardingData }) {
         name={typeof name === "string" ? name : null}
         role={typeof role === "string" ? role : null}
         canHandOff={canHandOff}
-        onHandOff={() => void skip()}
+        onHandOff={() => {
+          skip().catch((e) => setToast(errorText(e)));
+        }}
       />
 
       {pendingVisibility ? (

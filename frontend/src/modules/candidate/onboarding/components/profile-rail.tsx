@@ -142,7 +142,12 @@ export function ProfileRail({
           boxShadow: canHandOff ? "0 6px 18px var(--accent-glow)" : "none"
         }}
       >
-        {canHandOff ? "Enter CareerOS →" : `Enter CareerOS at ${Math.round(MIN_VIABLE_COVERAGE * 100)}%`}
+        {/* Deliberately NOT "Enter CareerOS" — that name belongs to the handoff turn, which
+            completes onboarding. This one defers it, and two buttons with the same accessible
+            name doing different things is a real trap for screen-reader users. */}
+        {canHandOff
+          ? "Skip ahead — finish later"
+          : `Skip ahead at ${Math.round(MIN_VIABLE_COVERAGE * 100)}%`}
       </button>
     </aside>
   );

@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     // Stored as `inferred`: it is model output until the candidate reads and accepts it.
-    await writeFacts(db, [
+    const stored = await writeFacts(db, [
       {
         dimension: "dna",
         key: "dna.summary",
@@ -94,7 +94,8 @@ export async function POST(request: Request) {
       }
     ]);
 
-    emit({ type: "done", summaryMd, bestFit });
+    // Return the persisted ledger so the client holds real row ids — see DnaStreamEvent.
+    emit({ type: "done", summaryMd, bestFit, facts: stored });
   });
 }
 
