@@ -6,8 +6,8 @@ export const studioMock: StudioData = {
   keywordTotal: 12,
   matchedKeywords: ["PostgreSQL", "AWS", "Python", "Go", "TypeScript", "API design", "CI/CD", "Docker"],
   jds: [
-    { label: "Senior SWE · Cempaka", missing: ["Distributed systems", "System design", "Experiment design"] },
-    { label: "Data Product Eng · RinggitPay", missing: ["Experiment design", "Data pipelines", "A/B testing"] }
+    { label: "Senior SWE · Cempaka", text: "Senior Software Engineer. Build distributed systems and reliable API platforms. Strong system design, PostgreSQL, AWS, TypeScript, Go, CI/CD, Docker, and experiment design required.", missing: ["Distributed systems", "System design", "Experiment design"] },
+    { label: "Data Product Eng · RinggitPay", text: "Data Product Engineer. Build data pipelines for payments products. Python, PostgreSQL, A/B testing, experiment design, AWS, and API design required.", missing: ["Experiment design", "Data pipelines", "A/B testing"] }
   ],
   resume: {
     name: "Aishah Rahman",

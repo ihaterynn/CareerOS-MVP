@@ -13,7 +13,6 @@ export function Toast({ message, onDone }: { message: string | null; onDone: () 
   return (
     <div
       role="status"
-      className="anim-pop"
       style={{
         position: "fixed",
         bottom: 24,
