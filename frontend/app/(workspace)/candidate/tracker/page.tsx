@@ -1,6 +1,8 @@
 import { getTrackerData } from "@/modules/candidate/tracker/queries";
 import { TrackerPanel } from "@/modules/candidate/tracker/components/tracker-panel";
 
+export const dynamic = "force-dynamic";
+
 // Server Component: fetch on the server, pass typed data to the client panel.
 export default async function TrackerPage() {
   const data = await getTrackerData();

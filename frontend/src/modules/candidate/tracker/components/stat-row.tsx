@@ -8,7 +8,7 @@ export function StatRow({ apps, analytics }: { apps: Application[]; analytics: T
   const cards = [
     { label: "Response rate", value: `${s.responseRate}%`, delta: "▲8%", deltaColor: "var(--risk-good)", color: "var(--text)", sub: `${s.appliedN} applied · ${s.responded} replies` },
     { label: "In progress", value: String(s.inProgress), delta: "", deltaColor: "var(--risk-good)", color: "var(--text)", sub: "Applied → Interview" },
-    { label: "Avg time in stage", value: String(analytics.avgDaysInStage), delta: "d", deltaColor: "var(--text-3)", color: "var(--text)", sub: `${analytics.slowestStage} is slowest` },
+    { label: "Avg time in stage", value: analytics.avgDaysInStage == null ? "—" : String(analytics.avgDaysInStage), delta: analytics.avgDaysInStage == null ? "" : "d", deltaColor: "var(--text-3)", color: "var(--text)", sub: analytics.slowestStage ? `${analytics.slowestStage} is slowest` : "Stage timing unavailable" },
     { label: "Offers", value: String(s.offers), delta: "", deltaColor: "var(--risk-good)", color: "var(--risk-good)", sub: "Setel · decide by Aug 2" }
   ];
 
