@@ -201,8 +201,10 @@ export type RoleTalentBoard = {
   title: string;
   team: string;
   location: string;
+  salary?: string;
   priority: "Urgent" | "Active" | "Pipeline";
   openings: number;
+  candidatePoolSize?: number;
   hiringGoal: string;
   roleSignals: string[];
   applicants: TalentMatch[];
