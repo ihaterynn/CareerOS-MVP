@@ -1,12 +1,12 @@
 import { CareerRootWorkspace } from "@/modules/employer/components/career-root-workspace";
 import { careerRootPolish } from "@/modules/employer/components/career-root-polish";
 import { careerRootClarity } from "@/modules/employer/components/career-root-clarity";
-import { getCareerRootSnapshot } from "@/modules/employer/career-root-db";
+import { getMarketCareerRootSnapshot } from "@/modules/employer/career-root-market-db";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const snapshot = await getCareerRootSnapshot();
+  const snapshot = await getMarketCareerRootSnapshot();
 
   return (
     <>
