@@ -1,9 +1,8 @@
 "use client";
 
 import { ArrowRight, BriefcaseBusiness, Building2, CheckCircle2, Compass, ShieldCheck, Sparkles } from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { shellNav } from "./nav-config";
+import { useState, useTransition } from "react";
+import { signIn } from "@/lib/auth-actions";
 
 const demoCredentials = {
   email: "demo@careeros.ai",
@@ -23,9 +22,10 @@ const spotlightStats = [
 ];
 
 export function LoginGateway() {
-  const router = useRouter();
   const [email, setEmail] = useState(demoCredentials.email);
   const [password, setPassword] = useState(demoCredentials.password);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f6f0e6] text-ink">
@@ -129,7 +129,12 @@ export function LoginGateway() {
                 className="mt-6 grid gap-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  router.push(shellNav.candidate.defaultHref);
+                  setError(null);
+                  // signIn redirects on success; it only returns on failure.
+                  startTransition(async () => {
+                    const result = await signIn(email, password);
+                    if (result && !result.ok) setError(result.error);
+                  });
                 }}
               >
                 <label className="block">
@@ -154,11 +159,18 @@ export function LoginGateway() {
                   />
                 </label>
 
+                {error ? (
+                  <p role="alert" className="text-sm font-semibold text-bad">
+                    {error}
+                  </p>
+                ) : null}
+
                 <button
                   type="submit"
-                  className="mt-2 inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#10233f] px-4 py-3 text-sm font-semibold text-paper transition hover:-translate-y-0.5 hover:bg-gold hover:text-[#1c1402]"
+                  disabled={pending}
+                  className="mt-2 inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#10233f] px-4 py-3 text-sm font-semibold text-paper transition hover:-translate-y-0.5 hover:bg-gold hover:text-[#1c1402] disabled:opacity-60"
                 >
-                  Enter CareerOS
+                  {pending ? "Signing in…" : "Enter CareerOS"}
                   <ArrowRight size={16} aria-hidden="true" />
                 </button>
               </form>
