@@ -9,6 +9,7 @@ import {
   KanbanSquare,
   LineChart,
   MapPinned,
+  BotMessageSquare,
   Network,
   Workflow
 } from "lucide-react";
@@ -27,6 +28,7 @@ const employerIcons: Record<EmployerModuleId, ShellNavItem["icon"]> = {
   dashboard: ChartNoAxesCombined,
   "career-root": Network,
   talent: Workflow,
+  jobby: BotMessageSquare,
   ingestion: Database,
   retention: Flame,
   onboarding: ClipboardCheck,

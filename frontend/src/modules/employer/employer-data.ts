@@ -331,6 +331,11 @@ export const employerModules: Array<NavigationItem<EmployerModuleId>> = [
     description: "Role matching, candidate shortlisting, interview preparation, and structured hiring decisions."
   },
   {
+    id: "jobby",
+    label: "Jobby.ai",
+    description: "Role-scoped hiring copilot for pipeline questions, comparisons, interviews, and outreach."
+  },
+  {
     id: "ingestion",
     label: "CV Ingestion",
     description: "Run a submitted CV batch through validation, matching, and trusted-candidate aggregation."
