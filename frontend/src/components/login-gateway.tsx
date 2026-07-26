@@ -2,6 +2,7 @@
 
 import { ArrowRight, BriefcaseBusiness, Building2, CheckCircle2, Compass, ShieldCheck, Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-actions";
 
 const demoCredentials = {
@@ -22,6 +23,7 @@ const spotlightStats = [
 ];
 
 export function LoginGateway() {
+  const router = useRouter();
   const [email, setEmail] = useState(demoCredentials.email);
   const [password, setPassword] = useState(demoCredentials.password);
   const [error, setError] = useState<string | null>(null);
@@ -130,10 +132,10 @@ export function LoginGateway() {
                 onSubmit={(event) => {
                   event.preventDefault();
                   setError(null);
-                  // signIn redirects on success; it only returns on failure.
                   startTransition(async () => {
                     const result = await signIn(email, password);
-                    if (result && !result.ok) setError(result.error);
+                    if (result.ok) router.push(result.redirectTo);
+                    else setError(result.error);
                   });
                 }}
               >

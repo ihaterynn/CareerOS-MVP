@@ -148,5 +148,12 @@ export type ParseStreamEvent =
 /** NDJSON frames streamed by the DNA route. */
 export type DnaStreamEvent =
   | { type: "delta"; text: string }
-  | { type: "done"; summaryMd: string; bestFit: Array<{ role: string; level: string }> }
+  | {
+      type: "done";
+      summaryMd: string;
+      bestFit: Array<{ role: string; level: string }>;
+      /** The stored ledger. The client must adopt these — a locally-minted fact id would not
+       *  match the persisted row, so later confirms would silently no-op. */
+      facts: Fact[];
+    }
   | { type: "error"; message: string };
