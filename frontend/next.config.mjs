@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@careeros/shared"],
+  serverExternalPackages: ["pdfkit"],
   // Old candidate slugs → new home. Handles bookmarks/open tabs after the module rename.
   async redirects() {
     return [
