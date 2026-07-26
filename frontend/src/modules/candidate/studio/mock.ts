@@ -10,7 +10,7 @@ export const studioMock: StudioData = {
     { label: "Data Product Eng · RinggitPay", text: "Data Product Engineer. Build data pipelines for payments products. Python, PostgreSQL, A/B testing, experiment design, AWS, and API design required.", missing: ["Experiment design", "Data pipelines", "A/B testing"] }
   ],
   resume: {
-    name: "Aishah Rahman",
+    name: "Nur Aina Rahman",
     title: "Backend Software Engineer",
     loc: "Petaling Jaya",
     email: "aishah.rahman@hantar.my",

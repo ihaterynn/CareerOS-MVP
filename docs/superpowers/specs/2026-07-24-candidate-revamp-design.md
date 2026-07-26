@@ -300,7 +300,7 @@ capability with its own product and legal review.
 Recreate ref lines 211–325 exactly. Two tabs via `Tabs` primitive: **Profile** / **Assessments**.
 
 **Profile tab** (`Card`, overflow hidden):
-- Identity header: 72px gradient avatar "AR", serif name "Aishah Rahman",
+- Identity header: 72px gradient avatar "AR", serif name "Nur Aina Rahman",
   `Software Engineer · Petaling Jaya · Parsed from résumé v3 · 96% depth`, skill pills (+N more),
   visibility pill + **"Manage sharing"** button.
 - Grid `1fr 340px`:

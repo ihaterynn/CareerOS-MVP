@@ -6,7 +6,7 @@ import type { DnaData } from "./types";
 
 export const dnaMock: DnaData = {
   profile: {
-    name: "Aishah Rahman",
+    name: "Nur Aina Rahman",
     short: "AR",
     meta: "Software Engineer · Petaling Jaya · Parsed from résumé v3",
     skills: ["Python", "PostgreSQL", "TypeScript"],

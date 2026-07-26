@@ -26,7 +26,7 @@ export const candidateModules: Array<NavigationItem<CandidateModuleId>> = [
 ];
 
 export const candidateProfile = {
-  name: "Aishah Rahman",
+  name: "Nur Aina Rahman",
   currentRole: "Software Engineer",
   location: "Petaling Jaya, Selangor",
   coordinates: { lat: 3.1073, lng: 101.6067 },
