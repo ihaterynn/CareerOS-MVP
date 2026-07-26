@@ -1,14 +1,20 @@
 export type SuggestionStatus = "pending" | "accepted" | "rejected";
+export type SuggestionKind = "recommendation" | "suggestion";
 
 export type Suggestion = {
   id: string;
+  /** Missing on legacy locally-saved drafts; those remain actionable recommendations. */
+  kind?: SuggestionKind;
   tag: string;
   text: string;
   field: "summary" | "exp";
   ei?: number; // experience index
   bi?: number; // bullet index
   replacement: string;
+  jdRequirement?: string;
+  evidence?: string;
   removeKw?: string;
+  baseText?: string;
   delta: number;
   status: SuggestionStatus;
 };
@@ -24,11 +30,12 @@ export type Resume = {
   summary: string;
   experience: Experience[];
   skills: string[];
+  other?: string;
 };
 
 export type ChatMessage = { role: "bot" | "user"; text: string };
 
-export type Jd = { label: string; missing: string[] };
+export type Jd = { label: string; text?: string; missing: string[] };
 
 export type StudioData = {
   resume: Resume;
