@@ -10,7 +10,7 @@ import {
   LineChart,
   MapPinned,
   Network,
-  UsersRound
+  Workflow
 } from "lucide-react";
 import type { CandidateModuleId, EmployerModuleId } from "@careeros/shared";
 import { candidateModules } from "@/modules/candidate/candidate-data";
@@ -26,7 +26,7 @@ const candidateIcons: Record<CandidateModuleId, ShellNavItem["icon"]> = {
 const employerIcons: Record<EmployerModuleId, ShellNavItem["icon"]> = {
   dashboard: ChartNoAxesCombined,
   "career-root": Network,
-  talent: UsersRound,
+  talent: Workflow,
   ingestion: Database,
   retention: Flame,
   onboarding: ClipboardCheck,
