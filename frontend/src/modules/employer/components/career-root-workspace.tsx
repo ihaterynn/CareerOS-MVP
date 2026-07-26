@@ -28,6 +28,7 @@ import type {
   CareerRootCandidate,
   CareerRootDataSource,
   CareerRootRole,
+  CareerRootRoute,
   CareerRootSkill
 } from "../career-root-db";
 
@@ -41,10 +42,31 @@ type Props = {
   dataSource: CareerRootDataSource;
 };
 
-const isDirectField = (candidate: CareerRootCandidate) =>
-  candidate.sourceField.toLowerCase().includes("computer");
+const normalized = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9+#/.]+/g, " ").replace(/\s+/g, " ").trim();
+
+function wordAffinity(left: string, right: string) {
+  const a = new Set(normalized(left).split(/\s+/).filter((token) => token.length > 1));
+  const b = new Set(normalized(right).split(/\s+/).filter((token) => token.length > 1));
+  if (!a.size || !b.size) return 0;
+  let overlap = 0;
+  for (const token of a) if (b.has(token)) overlap += 1;
+  return overlap / Math.max(a.size, b.size);
+}
 
 function branchHasCandidate(branch: CareerRootBranchRecord, candidate: CareerRootCandidate) {
+  const signals = branch.matchSignals ?? [];
+  if (signals.length) {
+    const candidateSkills = candidate.skills.map((skill) => normalized(skill.split("·")[0]));
+    const matchedSignals = signals.filter((signal) =>
+      candidateSkills.some((skill) => skill === normalized(signal) || skill.includes(normalized(signal)))
+    ).length;
+    const titleFit = wordAffinity(candidate.currentTrack, branch.roleTitle ?? branch.field);
+    const requiredMatches = branch.isPrimary
+      ? Math.min(2, signals.length)
+      : Math.max(1, Math.ceil(signals.length * 0.34));
+    return titleFit >= (branch.isPrimary ? 0.55 : 0.4) || matchedSignals >= requiredMatches;
+  }
   const source = candidate.sourceField.toLowerCase();
   return branch.sourceFields.some((field) => source.includes(field.toLowerCase()));
 }
@@ -73,48 +95,66 @@ export function CareerRootWorkspace({
   const [compared, setCompared] = useState<Set<string>>(new Set());
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [assignedCourses, setAssignedCourses] = useState<Set<string>>(new Set());
+  const [branchOverrides, setBranchOverrides] = useState<Record<string, CareerRootBranchRecord[]>>({});
+  const [refreshingBranches, setRefreshingBranches] = useState(false);
 
   const role = initialRoles.find((item) => item.id === roleId) ?? initialRoles[0];
-  const directBranch =
-    initialBranches.find((branch) =>
-      branch.sourceFields.some((field) => field.toLowerCase().includes("computer"))
-    ) ?? initialBranches[0];
-  const visibleBranches = lens === "traditional" ? [directBranch] : initialBranches;
-  const visibleCandidates = role.candidates
-    .filter((candidate) =>
-      visibleBranches.some((branch) => branchHasCandidate(branch, candidate))
-    )
-    .sort((a, b) =>
-      sortMode === "intent"
-        ? b.interestSignal - a.interestSignal
-        : b.score - a.score
+  const seededRoleBranches = initialBranches.filter((branch) => !branch.roleId || branch.roleId === role.id);
+  const roleBranches = branchOverrides[role.id] ?? seededRoleBranches;
+  const directBranch = roleBranches.find((branch) => branch.isPrimary) ?? roleBranches[0];
+  const visibleBranches = lens === "traditional" ? [directBranch] : roleBranches;
+  const allCandidateMap = new Map(
+    roleBranches.map((branch) => [
+      branch.id,
+      role.candidates
+        .filter((candidate) => branchHasCandidate(branch, candidate))
+        .sort((a, b) =>
+          sortMode === "intent" ? b.interestSignal - a.interestSignal : b.score - a.score
+        )
+    ])
   );
-  const activeBranch =
-    visibleBranches.find((branch) => branch.id === branchId) ?? visibleBranches[0];
-  const branchCandidates = visibleCandidates.filter((candidate) =>
-    branchHasCandidate(activeBranch, candidate)
+  const candidateMap = new Map(
+    visibleBranches.map((branch) => [branch.id, allCandidateMap.get(branch.id) ?? []])
   );
+  const visibleById = new Map<string, CareerRootCandidate>();
+  for (const candidates of candidateMap.values()) {
+    for (const candidate of candidates) visibleById.set(candidate.id, candidate);
+  }
+  const visibleCandidates = [...visibleById.values()].sort((a, b) =>
+    sortMode === "intent" ? b.interestSignal - a.interestSignal : b.score - a.score
+  );
+  const activeBranch = visibleBranches.find((branch) => branch.id === branchId) ?? visibleBranches[0];
+  const branchCandidates = candidateMap.get(activeBranch.id) ?? [];
   const selected =
     visibleCandidates.find((candidate) => candidate.id === candidateId) ??
+    branchCandidates[0] ??
     visibleCandidates[0] ??
     role.candidates[0];
-  const hiddenGems = visibleCandidates.filter((candidate) => !isDirectField(candidate)).length;
-  const recommendedAdjacent = [...role.candidates]
-    .filter((candidate) => !isDirectField(candidate))
-    .sort((a, b) => b.score - a.score)[0];
+  const directIds = new Set((allCandidateMap.get(directBranch.id) ?? []).map((candidate) => candidate.id));
+  const adjacentCandidates = roleBranches
+    .filter((branch) => !branch.isPrimary)
+    .flatMap((branch) => allCandidateMap.get(branch.id) ?? []);
+  const hiddenGemMap = new Map(
+    adjacentCandidates
+      .filter((candidate) => !directIds.has(candidate.id))
+      .map((candidate) => [candidate.id, candidate])
+  );
+  const hiddenGems = hiddenGemMap.size;
+  const recommendedAdjacent = [...hiddenGemMap.values()].sort((a, b) => b.score - a.score)[0];
   const recommendedBranch = recommendedAdjacent
-    ? initialBranches.find((branch) => branchHasCandidate(branch, recommendedAdjacent))
+    ? roleBranches.find((branch) => !branch.isPrimary && (allCandidateMap.get(branch.id) ?? []).some((candidate) => candidate.id === recommendedAdjacent.id))
     : undefined;
   const comparedCandidates = role.candidates.filter((candidate) => compared.has(candidate.id));
 
   function chooseRole(nextRoleId: string) {
     const nextRole = initialRoles.find((item) => item.id === nextRoleId) ?? initialRoles[0];
+    const nextBranches = branchOverrides[nextRole.id] ??
+      initialBranches.filter((branch) => !branch.roleId || branch.roleId === nextRole.id);
+    const nextDirect = nextBranches.find((branch) => branch.isPrimary) ?? nextBranches[0];
     setRoleId(nextRole.id);
-    setCandidateId(nextRole.candidates[0].id);
-    const candidateBranch =
-      initialBranches.find((branch) => branchHasCandidate(branch, nextRole.candidates[0])) ??
-      initialBranches[0];
-    setBranchId(candidateBranch.id);
+    setBranchId(nextDirect.id);
+    const firstCandidate = nextRole.candidates.find((candidate) => branchHasCandidate(nextDirect, candidate)) ?? nextRole.candidates[0];
+    setCandidateId(firstCandidate.id);
     setCompared(new Set());
     setComparisonOpen(false);
     setDetailTab("evidence");
@@ -124,18 +164,39 @@ export function CareerRootWorkspace({
     setLens(nextLens);
     if (nextLens === "traditional") {
       setBranchId(directBranch.id);
-      const directCandidate = role.candidates.find(isDirectField) ?? role.candidates[0];
+      const directCandidate = candidateMap.get(directBranch.id)?.[0] ?? role.candidates[0];
       setCandidateId(directCandidate.id);
     }
   }
 
   function chooseBranch(nextBranch: CareerRootBranchRecord) {
     setBranchId(nextBranch.id);
-    const firstCandidate = role.candidates
-      .filter((candidate) => branchHasCandidate(nextBranch, candidate))
-      .sort((a, b) => b.score - a.score)[0];
+    const firstCandidate = candidateMap.get(nextBranch.id)?.[0];
     if (firstCandidate) setCandidateId(firstCandidate.id);
     setDetailTab("evidence");
+  }
+
+  async function refreshAdjacentRoles() {
+    setRefreshingBranches(true);
+    try {
+      const response = await fetch("/api/employer/adjacent-roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: { id: role.id, title: role.title, signals: role.roleSignals },
+          branches: seededRoleBranches
+        })
+      });
+      if (!response.ok) throw new Error("Adjacent-role refresh failed");
+      const result = await response.json() as { branches: CareerRootBranchRecord[] };
+      setBranchOverrides((current) => ({ ...current, [role.id]: result.branches }));
+      const refreshedDirect = result.branches.find((branch) => branch.isPrimary) ?? result.branches[0];
+      setBranchId(refreshedDirect.id);
+    } catch {
+      // Keep the deterministic seeded-market recommendations already on screen.
+    } finally {
+      setRefreshingBranches(false);
+    }
   }
 
   function toggleQueued(id: string) {
@@ -184,42 +245,46 @@ export function CareerRootWorkspace({
         }}
       />
 
-      <LensBar lens={lens} hiddenCount={role.candidates.filter((item) => !isDirectField(item)).length} onChange={chooseLens} />
+      <LensBar lens={lens} hiddenCount={hiddenGems} onChange={chooseLens} />
 
       <main className="cr-main">
         <section className="cr-explorer">
           <div className="cr-section-head">
             <div>
               <span>Sourcing map</span>
-              <h2>Expand the role into adjacent talent fields</h2>
+              <h2>Expand the vacancy into adjacent market roles</h2>
             </div>
-            <label className="cr-sort">
-              <span>Rank by</span>
-              <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
-                <option value="score">Overall fit</option>
-                <option value="intent">Interest signal</option>
-              </select>
-              <ChevronDown size={14} aria-hidden="true" />
-            </label>
+            <div className="cr-map-actions">
+              <button type="button" className="cr-secondary" onClick={refreshAdjacentRoles} disabled={refreshingBranches}>
+                <Network size={14} />
+                {refreshingBranches ? "Refreshing roles…" : "Refresh adjacent roles"}
+              </button>
+              <label className="cr-sort">
+                <span>Rank by</span>
+                <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
+                  <option value="score">Overall fit</option>
+                  <option value="intent">Interest signal</option>
+                </select>
+                <ChevronDown size={14} aria-hidden="true" />
+              </label>
+            </div>
           </div>
 
           <RoleRoot role={role} visibleCount={visibleCandidates.length} lens={lens} />
 
           <div className="cr-branch-grid" style={{ "--branches": visibleBranches.length } as CSSProperties}>
             {visibleBranches.map((branch, index) => {
-              const candidates = role.candidates.filter((candidate) =>
-                branchHasCandidate(branch, candidate)
-              );
+              const candidates = candidateMap.get(branch.id) ?? [];
               const best = candidates.length ? Math.max(...candidates.map((item) => item.score)) : 0;
               const isActive = branch.id === activeBranch.id;
-              const isPrimary = branch.id === directBranch.id;
+              const isPrimary = Boolean(branch.isPrimary);
               const sharedEvidence =
                 candidates[0]?.highlights.slice(0, 2).join(" · ") ?? "Evidence still developing";
               const stateLabel = isActive
                 ? "Currently exploring"
                 : isPrimary
-                  ? "Primary field"
-                  : "Adjacent field";
+                  ? "Direct role"
+                  : "Adjacent role";
               return (
                 <button
                   key={branch.id}
@@ -278,7 +343,7 @@ export function CareerRootWorkspace({
               ) : (
                 <div className="cr-empty-branch">
                   <Users size={20} />
-                  <p>No seeded candidate currently maps to this field for the selected role.</p>
+                  <p>No surfaced candidate currently matches this adjacent role.</p>
                 </div>
               )}
             </div>
@@ -286,7 +351,9 @@ export function CareerRootWorkspace({
         </section>
 
         <CandidateInspector
+          key={selected.id}
           candidate={selected}
+          role={role}
           branch={activeBranch}
           tab={detailTab}
           queued={queued.has(selected.id)}
@@ -429,7 +496,7 @@ function RoleRoot({
       <div>
         <span>Vacancy root</span>
         <h3>{role.title}</h3>
-        <p>{lens === "root" ? "Adjacent evidence enabled" : "Direct field only"} · {visibleCount} visible leads</p>
+        <p>{lens === "root" ? "Adjacent evidence enabled" : "Direct field only"} · {visibleCount} surfaced from {role.candidatePoolSize ?? visibleCount} indexed profiles</p>
       </div>
       <div className="cr-priority" data-priority={role.priority.toLowerCase()}>
         <i /> {role.priority}
@@ -495,6 +562,7 @@ function CandidateRow({
 
 function CandidateInspector({
   candidate,
+  role,
   branch,
   tab,
   queued,
@@ -506,6 +574,7 @@ function CandidateInspector({
   onToggleCourse
 }: {
   candidate: CareerRootCandidate;
+  role: CareerRootRole;
   branch: CareerRootBranchRecord;
   tab: DetailTab;
   queued: boolean;
@@ -541,7 +610,7 @@ function CandidateInspector({
         {tab === "evidence" ? (
           <EvidenceView candidate={candidate} branch={branch} />
         ) : (
-          <BridgeView candidate={candidate} assignedCourses={assignedCourses} onToggleCourse={onToggleCourse} />
+          <BridgeView candidate={candidate} role={role} assignedCourses={assignedCourses} onToggleCourse={onToggleCourse} />
         )}
       </div>
 
@@ -637,21 +706,62 @@ function SkillSignal({ skill }: { skill: CareerRootSkill }) {
 
 function BridgeView({
   candidate,
+  role,
   assignedCourses,
   onToggleCourse
 }: {
   candidate: CareerRootCandidate;
+  role: CareerRootRole;
   assignedCourses: Set<string>;
   onToggleCourse: (id: string) => void;
 }) {
-  const route = candidate.route;
+  const [route, setRoute] = useState<CareerRootRoute | null>(candidate.route);
+  const [generating, setGenerating] = useState(false);
+  const [generationMeta, setGenerationMeta] = useState<{
+    source: "openrouter" | "fallback";
+    model?: string;
+    warning?: string;
+  } | null>(null);
+
+  async function refineRoute() {
+    if (!route) return;
+    setGenerating(true);
+    setGenerationMeta(null);
+    try {
+      const response = await fetch("/api/employer/career-route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidate,
+          role: { title: role.title, signals: role.roleSignals },
+          existingRoute: route
+        })
+      });
+      if (!response.ok) throw new Error("Career route generation request failed");
+      const result = await response.json() as {
+        route: CareerRootRoute;
+        source: "openrouter" | "fallback";
+        model?: string;
+        warning?: string;
+      };
+      setRoute(result.route);
+      setGenerationMeta({ source: result.source, model: result.model, warning: result.warning });
+    } catch {
+      setGenerationMeta({
+        source: "fallback",
+        warning: "AI refinement was unavailable; the evidence-derived route remains active."
+      });
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   if (!route) {
     return (
       <div className="cr-no-route">
         <Route size={22} />
-        <h3>No seeded bridge plan for this role yet.</h3>
-        <p>The candidate evidence is live, but this role-specific path still needs modelling.</p>
+        <h3>No bridge plan available.</h3>
+        <p>A route needs enough candidate and role evidence before it can be modelled.</p>
       </div>
     );
   }
@@ -666,6 +776,11 @@ function BridgeView({
         </div>
         <div><strong>{route.readiness}</strong><span>% ready</span></div>
       </div>
+
+      <button type="button" className="cr-secondary" onClick={refineRoute} disabled={generating}>
+        <WandSparkles size={14} />
+        {generating ? "Refining bridge…" : generationMeta ? "Refine bridge again" : "Refine bridge"}
+      </button>
 
       <div className="cr-pay">
         <div><span>Current expectation</span><strong>{route.currentExpectedPay}</strong></div>
@@ -832,6 +947,8 @@ const styles = `
   .cr-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--line); padding: 15px 17px; background: linear-gradient(90deg,#e8eef8,#f7f9fc); }
   .cr-section-head > div > span { color: #637086; font-size: 10px; font-weight: 700; }
   .cr-section-head h2 { margin: 4px 0 0; font-size: 18px; letter-spacing: -.028em; }
+  .cr-map-actions { display: flex; align-items: flex-end; gap: 9px; }
+  .cr-map-actions > button { min-height: 32px; white-space: nowrap; }
   .cr-sort { position: relative; }
   .cr-sort > span { display: block; margin-bottom: 4px; color: #6b778a; font-size: 9px; font-weight: 700; }
   .cr-sort select { appearance: none; border: 1px solid var(--line-strong); border-radius: 7px; padding: 7px 29px 7px 9px; color: #415069; background: #fff; font-size: 9px; font-weight: 700; }

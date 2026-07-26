@@ -19,6 +19,7 @@ import {
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   generateInterviewKit,
+  type InterviewKit,
   type RoleTalentBoard,
   type TalentMatch
 } from "../employer-data";
@@ -224,7 +225,7 @@ function CommandBar({
           </p>
         </div>
         <div className="hp-command-metrics">
-          <Metric value={candidates.length} label="Matched" />
+          <Metric value={role.candidatePoolSize ?? candidates.length} label="Indexed" />
           <Metric value={`${candidates[0].score}%`} label="Best fit" />
           <Metric value={shortlistCount} label="Shortlisted" />
         </div>
@@ -301,7 +302,7 @@ function MatchStage({
         <div className="hp-section-head">
           <div>
             <span>Candidate ranking</span>
-            <h2>{candidates.length} matches for {role.title}</h2>
+            <h2>Top {candidates.length} of {role.candidatePoolSize ?? candidates.length} for {role.title}</h2>
           </div>
           <p>{compared.size ? `${compared.size} selected to compare` : "Select up to 3 to compare"}</p>
         </div>
@@ -553,19 +554,53 @@ function InterviewStage({
   onDecision: () => void;
 }) {
   const candidate = candidates.find((item) => item.id === selected.id) ?? candidates[0];
-  const kit = useMemo(() => generateInterviewKit(candidate, role.title), [candidate, role.title]);
+  const fallbackKit = useMemo(() => generateInterviewKit(candidate, role.title), [candidate, role.title]);
+  const [kit, setKit] = useState<InterviewKit>(fallbackKit);
   const [activeCategory, setActiveCategory] = useState<"role" | "personality" | "culture">("role");
   const [generated, setGenerated] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [, setGenerationMeta] = useState<{
+    source: "openrouter" | "fallback";
+    model?: string;
+    warning?: string;
+  } | null>(null);
   const category = kit.categories.find((item) => item.id === activeCategory) ?? kit.categories[0];
 
-  function generate() {
+  async function generate() {
     setGenerating(true);
     setGenerated(false);
-    window.setTimeout(() => {
-      setGenerating(false);
+    setGenerationMeta(null);
+
+    try {
+      const response = await fetch("/api/employer/interview-kit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidate,
+          roleTitle: role.title,
+          roleSignals: role.roleSignals
+        })
+      });
+      if (!response.ok) throw new Error("Interview generation request failed");
+      const result = await response.json() as {
+        kit: InterviewKit;
+        source: "openrouter" | "fallback";
+        model?: string;
+        warning?: string;
+      };
+      setKit(result.kit);
+      setGenerationMeta({ source: result.source, model: result.model, warning: result.warning });
       setGenerated(true);
-    }, 650);
+    } catch {
+      setKit(fallbackKit);
+      setGenerationMeta({
+        source: "fallback",
+        warning: "The model endpoint was unavailable, so CareerOS generated a local evidence-based kit."
+      });
+      setGenerated(true);
+    } finally {
+      setGenerating(false);
+    }
   }
 
   return (
@@ -581,6 +616,7 @@ function InterviewStage({
               onChange={(event) => {
                 onSelect(event.target.value);
                 setGenerated(false);
+                setGenerationMeta(null);
               }}
             >
               {candidates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -601,9 +637,9 @@ function InterviewStage({
             </button>
           ))}
         </div>
-        <button type="button" className="hp-generate" onClick={generate}>
+        <button type="button" className="hp-generate" onClick={generate} disabled={generating}>
           <WandSparkles size={16} />
-          {generated ? "Regenerate kit" : "Generate interview kit"}
+          {generating ? "Generating interview…" : generated ? "Regenerate kit" : "Generate interview kit"}
         </button>
       </aside>
 
@@ -612,12 +648,15 @@ function InterviewStage({
           <div className="hp-generation-state">
             <div className={generating ? "is-generating" : ""}><WandSparkles size={25} /></div>
             <h3>{generating ? "Building the interview…" : "Ready to generate."}</h3>
-            <p>{generating ? "Reading resume, Career DNA and role gaps." : `Create focused questions for ${candidate.name}.`}</p>
+            <p>{generating ? "Reading seeded profile evidence, Career DNA and role gaps." : `Create focused questions for ${candidate.name}.`}</p>
           </div>
         ) : (
           <>
             <div className="hp-question-head">
-              <div><span>{category.label}</span><h2>{candidate.name.split(" ")[0]} × {role.title}</h2></div>
+              <div>
+                <span>{category.label}</span>
+                <h2>{candidate.name.split(" ")[0]} × {role.title}</h2>
+              </div>
               <button type="button" className="hp-secondary" onClick={onDecision}>
                 Decision brief <ArrowRight size={14} />
               </button>
