@@ -9,6 +9,7 @@ export type EmployerModuleId =
   | "dashboard"
   | "career-root"
   | "talent"
+  | "jobby"
   | "ingestion"
   | "retention"
   | "onboarding"
