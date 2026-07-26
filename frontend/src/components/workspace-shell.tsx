@@ -251,7 +251,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             <span style={{ position: "absolute", top: 6, right: 7, width: 7, height: 7, borderRadius: "50%", background: "var(--risk-bad)", border: "1.5px solid var(--surface)" }} />
           </button>
           <ThemeToggle theme={theme} onToggle={() => setTheme((t) => (t === "light" ? "dark" : "light"))} />
-          <Avatar name={portal === "candidate" ? "Aishah Rahman" : "Talent Team"} size={34} />
+          <Avatar name={portal === "candidate" ? "Nur Aina Rahman" : "Talent Team"} size={34} />
         </div>
       </header>
 

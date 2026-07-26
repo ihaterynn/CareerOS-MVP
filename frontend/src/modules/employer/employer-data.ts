@@ -370,7 +370,7 @@ export const employerMetrics = [
 export const talentMatches: TalentMatch[] = [
   {
     id: "tm-aishah",
-    name: "Aishah Rahman",
+    name: "Nur Aina Rahman",
     avatar: "AR",
     currentTrack: "Software Engineer",
     sourceField: "Computer Science",
@@ -709,7 +709,7 @@ export const attritionClusters: AttritionCluster[] = [
 export const applicationReviews: ApplicationReview[] = [
   {
     id: "review-aishah",
-    candidate: "Aishah Rahman",
+    candidate: "Nur Aina Rahman",
     role: "Senior Software Engineer, Platform",
     score: 91,
     status: "New",
