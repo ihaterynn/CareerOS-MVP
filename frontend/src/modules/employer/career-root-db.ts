@@ -60,6 +60,7 @@ export type CareerRootRole = {
   location: string;
   priority: "Urgent" | "Active" | "Pipeline";
   openings: number;
+  candidatePoolSize?: number;
   hiringGoal: string;
   roleSignals: string[];
   candidates: CareerRootCandidate[];
@@ -67,10 +68,14 @@ export type CareerRootRole = {
 
 export type CareerRootBranchRecord = {
   id: string;
+  roleId?: string;
+  roleTitle?: string;
   field: string;
   fitReason: string;
   thresholdRelaxed: string;
   sourceFields: string[];
+  matchSignals?: string[];
+  isPrimary?: boolean;
 };
 
 export type CareerRootSnapshot = {
