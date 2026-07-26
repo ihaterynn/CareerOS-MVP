@@ -318,7 +318,7 @@ export const employerModules: Array<NavigationItem<EmployerModuleId>> = [
   {
     id: "dashboard",
     label: "Dashboard",
-    description: "Hiring health, retention risk, onboarding predictions, and review workload."
+    description: "Daily CV review desk with fair, JD-aware screening and human decisions."
   },
   {
     id: "career-root",
@@ -336,35 +336,10 @@ export const employerModules: Array<NavigationItem<EmployerModuleId>> = [
     description: "Role-scoped hiring copilot for pipeline questions, comparisons, interviews, and outreach."
   },
   {
-    id: "ingestion",
-    label: "CV Ingestion",
-    description: "Run a submitted CV batch through validation, matching, and trusted-candidate aggregation."
-  },
-  {
-    id: "retention",
-    label: "Retention",
-    description: "Explainable retention risk signals with candidate opt-out awareness."
-  },
-  {
     id: "onboarding",
     label: "Onboarding",
     description: "Automated onboarding workflows with success prediction, milestones, and ramp-risk."
   },
-  {
-    id: "heatmap",
-    label: "Skill Heatmap",
-    description: "Demand, supply, salary pressure, and talent availability by location."
-  },
-  {
-    id: "attrition",
-    label: "Attrition",
-    description: "Root-cause clusters from exit, promotion, salary, and engagement patterns."
-  },
-  {
-    id: "review",
-    label: "Review",
-    description: "Shortlist or reject applicants with mandatory feedback reasons."
-  }
 ];
 
 export const employerMetrics = [

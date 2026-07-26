@@ -9,15 +9,16 @@ export type ExtractedCv = {
   years: number;
   skills: string[];
   confidence: number;
+  degreeRelevant?: boolean;
   status?: "missing contact" | "duplicate fingerprint" | "parse failed";
 };
 
 export type QualifiedCv = ExtractedCv & { score: number; skillCluster: string; experienceBand: string; gap: string };
 export type AggregationMode = "skillCluster" | "experienceBand" | "location" | "gap";
 
-const roles: Record<IngestionRole, { skills: string[]; cluster: string }> = {
-  "Senior Product Designer": { skills: ["Figma", "Research", "Design systems"], cluster: "Product craft" },
-  "Backend Engineer": { skills: ["TypeScript", "Node.js", "PostgreSQL"], cluster: "Platform engineering" },
+const roles: Record<IngestionRole, { skills: string[]; cluster: string; minYears?: number; requiresRelevantDegree?: boolean }> = {
+  "Senior Product Designer": { skills: ["Figma", "Research", "Design systems"], cluster: "Product craft", minYears: 5 },
+  "Backend Engineer": { skills: ["TypeScript", "Node.js", "PostgreSQL"], cluster: "Platform engineering", minYears: 5, requiresRelevantDegree: true },
   "Data Analyst": { skills: ["SQL", "Python", "Tableau"], cluster: "Decision science" }
 };
 
@@ -88,16 +89,16 @@ function qualify(candidate: ExtractedCv): QualifiedCv {
   };
 }
 
-export function buildIngestionResult() {
-  const silver = extractedCvs.filter((candidate) => !candidate.status);
-  const rejected = extractedCvs.filter((candidate) => candidate.status).map((candidate) => ({
+export function buildIngestionResult(candidates = extractedCvs) {
+  const silver = candidates.filter((candidate) => !candidate.status);
+  const rejected = candidates.filter((candidate) => candidate.status).map((candidate) => ({
     ...candidate,
     reason: candidate.status as NonNullable<ExtractedCv["status"]>
   }));
   const qualified = silver.map(qualify);
   const gold = qualified.filter((candidate) => candidate.score >= 70);
 
-  return { bronze: extractedCvs, silver, gold, rejected };
+  return { bronze: candidates, silver, gold, rejected };
 }
 
 export function aggregateGoldCandidates(candidates: QualifiedCv[], by: AggregationMode) {
@@ -111,4 +112,97 @@ export function aggregateGoldCandidates(candidates: QualifiedCv[], by: Aggregati
   return [...counts]
     .map(([label, count]) => ({ label, count }))
     .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+}
+
+export function rejectionBreakdown(records: Array<ExtractedCv & { reason: NonNullable<ExtractedCv["status"]> }>) {
+  const counts = new Map<NonNullable<ExtractedCv["status"]>, number>();
+
+  for (const record of records) counts.set(record.reason, (counts.get(record.reason) ?? 0) + 1);
+  return [...counts].map(([label, count]) => ({ label, count }));
+}
+
+export const mockDailyCvs: ExtractedCv[] = Array.from({ length: 1000 }, (_, index) => {
+  const role = (Object.keys(roles) as IngestionRole[])[index % 3];
+  const job = roles[role];
+  const passed = index < 24;
+  const reviewable = index >= 24 && index < 350;
+  const hardPass = passed || reviewable;
+
+  return {
+    id: `daily-mock-${index + 1}`,
+    name: `Candidate ${String(index + 1).padStart(4, "0")}`,
+    source: `candidate-${String(index + 1).padStart(4, "0")}.pdf`,
+    role,
+    location: ["Kuala Lumpur", "Penang", "Singapore"][index % 3],
+    years: hardPass ? job.minYears ?? 2 : Math.max(0, (job.minYears ?? 2) - 2),
+    skills: passed ? job.skills : reviewable ? job.skills.slice(0, 1 + (index % (job.skills.length - 1))) : ["Excel"],
+    confidence: 96,
+    degreeRelevant: hardPass,
+  };
+});
+
+export type ReviewRecommendation = "Passed" | "Reviewable";
+
+export type DailyReviewCandidate = QualifiedCv & {
+  matchedRequirements: number;
+  requiredRequirements: number;
+  recommendation: ReviewRecommendation;
+  hardFilterReasons: string[];
+  evidence: Array<{ label: string; detail: string; passed: boolean }>;
+};
+
+export function buildDailyReviewDesk(candidates = extractedCvs, role?: IngestionRole) {
+  const assessed = candidates.filter((candidate) => !candidate.status).map((candidate) => {
+    const job = roles[candidate.role];
+    const hardFilterReasons = [
+      ...(job.minYears && candidate.years < job.minYears ? [`Requires ${job.minYears}+ years of relevant experience`] : []),
+      ...(job.requiresRelevantDegree && !candidate.degreeRelevant ? ["Requires a relevant degree"] : [])
+    ];
+    return { ...qualify(candidate), hardFilterReasons };
+  });
+  const eligible = assessed.filter((candidate) => candidate.hardFilterReasons.length === 0);
+  const toReviewCandidate = (candidate: (typeof eligible)[number]): DailyReviewCandidate => {
+      const requirements = roles[candidate.role].skills;
+      const matchedRequirements = candidate.skills.filter((skill) => requirements.includes(skill)).length;
+      const recommendation: ReviewRecommendation = matchedRequirements === requirements.length ? "Passed" : "Reviewable";
+
+      return {
+        ...candidate,
+        matchedRequirements,
+        requiredRequirements: requirements.length,
+        recommendation,
+        hardFilterReasons: [],
+        evidence: [
+          { label: "Hard filters", detail: "Experience and required qualifications passed", passed: true },
+          { label: "Core requirements", detail: `${matchedRequirements} of ${requirements.length} matched`, passed: recommendation === "Passed" },
+          { label: "Relevant experience", detail: `${candidate.years} years in comparable work`, passed: candidate.years >= 4 },
+          { label: "CV quality", detail: `${candidate.confidence}% extraction confidence`, passed: candidate.confidence >= 90 }
+        ]
+      };
+    };
+  const passed = eligible.filter((candidate) => candidate.skills.filter((skill) => roles[candidate.role].skills.includes(skill)).length === roles[candidate.role].skills.length).map(toReviewCandidate);
+  const remainingReviewSlots = Math.max(0, Math.round(candidates.length * 0.35) - passed.length);
+  const partialMatches = eligible
+    .filter((candidate) => candidate.skills.filter((skill) => roles[candidate.role].skills.includes(skill)).length < roles[candidate.role].skills.length)
+    .map(toReviewCandidate)
+    .sort((left, right) => right.score - left.score || right.years - left.years);
+  const reviewable = partialMatches.slice(0, remainingReviewSlots);
+  const deferred = partialMatches.slice(remainingReviewSlots);
+  const visiblePassed = passed.filter((candidate) => !role || candidate.role === role);
+  const visibleReviewable = reviewable.filter((candidate) => !role || candidate.role === role);
+  const queue = [...visiblePassed, ...visibleReviewable].sort((left, right) => right.score - left.score || right.years - left.years);
+  const ineligible = assessed.filter((candidate) => candidate.hardFilterReasons.length > 0);
+
+  return {
+    totalReceived: candidates.length,
+    autoFiltered: ineligible.length,
+    reviewReady: passed.length + reviewable.length,
+    queue,
+    passed,
+    reviewable,
+    ineligible,
+    deferred,
+    hardFilterBreakdown: [...new Set(ineligible.flatMap((candidate) => candidate.hardFilterReasons))].map((label) => ({ label, count: ineligible.filter((candidate) => candidate.hardFilterReasons.includes(label)).length })),
+    roles: (Object.keys(roles) as IngestionRole[]).map((title) => ({ title, count: passed.filter((candidate) => candidate.role === title).length + reviewable.filter((candidate) => candidate.role === title).length }))
+  };
 }

@@ -1,5 +1,5 @@
-import { RetentionPanel } from "@/modules/employer/components/retention-panel";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <RetentionPanel />;
+  redirect("/employer/dashboard");
 }

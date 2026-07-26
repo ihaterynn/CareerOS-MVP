@@ -1,5 +1,5 @@
-import { SkillHeatmapPanel } from "@/modules/employer/components/heatmap-panel";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <SkillHeatmapPanel />;
+  redirect("/employer/dashboard");
 }

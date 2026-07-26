@@ -1,5 +1,8 @@
-import { EmployerDashboardPanel } from "@/modules/employer/components/dashboard-panel";
+import { CvIngestionPanel } from "@/modules/employer/components/ingestion-panel";
+import { getCvIngestionRecords } from "@/modules/employer/queries";
 
-export default function Page() {
-  return <EmployerDashboardPanel />;
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  return <CvIngestionPanel records={await getCvIngestionRecords()} />;
 }
