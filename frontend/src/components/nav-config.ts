@@ -1,14 +1,9 @@
 import {
   ChartNoAxesCombined,
   ClipboardCheck,
-  ClipboardList,
-  Database,
   Dna,
   FilePenLine,
-  Flame,
   KanbanSquare,
-  LineChart,
-  MapPinned,
   BotMessageSquare,
   Network,
   Workflow
@@ -29,12 +24,7 @@ const employerIcons: Record<EmployerModuleId, ShellNavItem["icon"]> = {
   "career-root": Network,
   talent: Workflow,
   jobby: BotMessageSquare,
-  ingestion: Database,
-  retention: Flame,
-  onboarding: ClipboardCheck,
-  heatmap: MapPinned,
-  attrition: LineChart,
-  review: ClipboardList
+  onboarding: ClipboardCheck
 };
 
 const candidateItems: ShellNavItem[] = candidateModules.map((m) => ({

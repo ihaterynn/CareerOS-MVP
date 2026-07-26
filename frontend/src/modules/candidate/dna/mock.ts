@@ -25,7 +25,31 @@ export const dnaMock: DnaData = {
       { role: "People Management", level: "Stretch", color: "var(--text-3)" }
     ],
     summary:
-      "An analytical builder who thrives in structured, autonomy-heavy teams. Turns messy operational problems into reliable systems and measurable impact — happiest owning a service end-to-end with room for deep focus."
+      "An analytical builder who thrives in structured, autonomy-heavy teams. Turns messy operational problems into reliable systems and measurable impact — happiest owning a service end-to-end with room for deep focus.",
+    careerGuidance: {
+      workProfile: {
+        satisfactionScore: 76,
+        summary: "Technical depth and ownership are energising; broader stakeholder influence is the next growth area.",
+        energizers: ["Deep systems work", "End-to-end delivery"],
+        drains: ["Limited cross-team influence"]
+      },
+      currentRole: {
+        role: "Software Engineer",
+        score: 87,
+        summary: "A strong fit for systems-heavy engineering: your analytical depth, structure, and ownership align with the work. Collaboration is the clearest growth edge for broader scope.",
+        dimensions: [
+          { label: "Systems thinking", value: 92, detail: "Enjoys deep problem framing and reliable architecture.", evidence: "Reduced order-assignment latency in a production dispatch system." },
+          { label: "Autonomy", value: 89, detail: "Works best with clear outcomes and room to own execution.", evidence: "Built merchant dashboards and automated reconciliation jobs." },
+          { label: "Delivery discipline", value: 84, detail: "Turns operational ambiguity into measurable improvements.", evidence: "Delivered measurable latency improvements for Klang Valley dispatch." },
+          { label: "Stakeholder influence", value: 62, detail: "A useful stretch area before managing broader initiatives.", evidence: "The résumé contains limited cross-team leadership evidence." }
+        ]
+      },
+      suggestions: [
+        { path: "Explore", role: "Backend Platform Engineer", score: 91, reason: "Your systems focus, PostgreSQL depth, and preference for end-to-end ownership map directly to platform work.", evidence: "Production dispatch latency and automated reconciliation work.", nextStep: "Lead one reliability or developer-experience improvement from proposal to rollout." },
+        { path: "Explore", role: "Data Product Engineer", score: 84, reason: "You combine data curiosity with production engineering and have evidence in dispatch tooling and analytics workflows.", evidence: "Merchant dashboards and reconciliation workflows.", nextStep: "Build one governed data product or experiment pipeline with a product partner." },
+        { path: "Promotion", role: "Senior Software Engineer", score: 86, reason: "You already show technical ownership; the next level needs visible technical direction and stronger cross-team communication.", evidence: "Measurable ownership of production reliability work.", nextStep: "Own an architecture review and mentor a teammate through a production delivery." }
+      ]
+    }
   },
   instruments: [
     { id: "mbti", label: "MBTI", total: 60, result: "INTJ-A" },

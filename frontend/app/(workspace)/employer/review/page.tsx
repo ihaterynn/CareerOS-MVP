@@ -1,5 +1,5 @@
-import { ApplicationReviewPanel } from "@/modules/employer/components/review-panel";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <ApplicationReviewPanel />;
+  redirect("/employer/dashboard");
 }

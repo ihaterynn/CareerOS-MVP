@@ -1,259 +1,151 @@
 "use client";
 
-import { CheckCircle2, CircleX, FileText, Play, RotateCcw, ShieldCheck, Sparkles, Workflow } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { BadgeCheck, ChevronRight, CircleCheck, Clock3, FileSearch, Filter, LockKeyhole, MapPin, Pause, UserCheck, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
 import { EmployerPageHeader } from "./employer-ui";
-import {
-  aggregateGoldCandidates,
-  buildIngestionResult,
-  type AggregationMode,
-  type ExtractedCv,
-  type QualifiedCv
-} from "../ingestion-data";
+import { buildDailyReviewDesk, mockDailyCvs, type DailyReviewCandidate, type ExtractedCv, type IngestionRole } from "../ingestion-data";
 
-const pipeline = buildIngestionResult();
-type RunState = "ready" | "bronze" | "silver" | "gold" | "complete";
+type ReviewAction = "Shortlisted" | "On hold" | "Not progressing";
+type RoleFilter = IngestionRole | "All roles";
+type QueueFilter = "all" | "passed" | "reviewable";
 
-const stages = [
-  { id: "bronze", label: "Bronze", title: "Submitted", detail: "Raw extracted records", tone: "border-[#C88852] bg-[#FDF2E8] text-[#8A4D1E]" },
-  { id: "silver", label: "Silver", title: "Validated", detail: "Clean, complete profiles", tone: "border-[#9CA9B6] bg-[#EFF3F6] text-[#465767]" },
-  { id: "gold", label: "Gold", title: "Qualified", detail: "Role-matched candidates", tone: "border-[#D6AC4D] bg-[#FFF7DE] text-[#825D0D]" }
-] as const;
+const actionStyle: Record<ReviewAction, string> = {
+  Shortlisted: "border-[#BFDCC8] bg-[#EAF4EC] text-good",
+  "On hold": "border-[#E3D2A6] bg-[#F7EFD9] text-warn",
+  "Not progressing": "border-[#E8BDB7] bg-[#F7E5E1] text-bad"
+};
 
-function stateIncludes(state: RunState, stage: "bronze" | "silver" | "gold") {
-  return (state === "bronze" && stage === "bronze") ||
-    (state === "silver" && (stage === "bronze" || stage === "silver")) ||
-    (state === "gold" && true) ||
-    state === "complete";
+function initials(name: string) {
+  return name.split(" ").map((part) => part[0]).join("").slice(0, 2);
 }
 
-function RecordPills({ records, tone }: { records: ExtractedCv[]; tone: "bronze" | "silver" | "gold" }) {
-  const color = tone === "gold" ? "bg-[#E8C878] text-[#3D2C03]" : tone === "silver" ? "bg-[#DDE5EC] text-[#33495A]" : "bg-[#F2D3B8] text-[#703A14]";
-
-  return (
-    <div className="mt-4 flex flex-wrap gap-1.5">
-      {records.slice(0, 5).map((record) => (
-        <span key={record.id} className={`rounded-full px-2 py-1 text-[10px] font-bold ${color}`}>
-          {record.name.split(" ")[0]}
-        </span>
-      ))}
-      {records.length > 5 ? <span className="rounded-full border border-current/15 px-2 py-1 text-[10px] font-bold">+{records.length - 5}</span> : null}
-    </div>
-  );
-}
-
-function StageCard({
-  stage,
-  count,
-  records,
-  running,
-  complete
-}: {
-  stage: (typeof stages)[number];
-  count: number;
-  records: ExtractedCv[];
-  running: boolean;
-  complete: boolean;
-}) {
-  const visible = running || complete;
-  const [displayCount, setDisplayCount] = useState(0);
-
-  useEffect(() => {
-    let frame = 0;
-    if (!visible) {
-      frame = requestAnimationFrame(() => setDisplayCount(0));
-      return () => cancelAnimationFrame(frame);
-    }
-
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      frame = requestAnimationFrame(() => setDisplayCount(count));
-      return () => cancelAnimationFrame(frame);
-    }
-
-    const startedAt = performance.now();
-    const duration = 360;
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / duration);
-      setDisplayCount(Math.round(count * progress));
-      if (progress < 1) frame = requestAnimationFrame(tick);
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [count, visible]);
-
-  return (
-    <section className={`relative min-h-56 overflow-hidden rounded-[20px] border p-4 shadow-soft transition-all duration-500 ${stage.tone} ${running ? "-translate-y-1 ring-4 ring-gold/15" : ""}`}>
-      <div className="absolute right-3 top-3 font-mono text-[10px] font-bold tracking-[0.16em] opacity-50">{stage.label.toUpperCase()}</div>
-      <p className="kicker !text-current opacity-65">{stage.detail}</p>
-      <div className="mt-4 flex items-end justify-between gap-3">
-        <h3 className="font-serif text-2xl font-semibold">{stage.title}</h3>
-        <p className="font-serif text-5xl font-semibold leading-none">{visible ? displayCount : "—"}</p>
-      </div>
-      <p className="mt-2 text-sm font-medium opacity-75">{visible ? `${displayCount} records in this layer` : "Waiting for run"}</p>
-      {visible ? <RecordPills records={records} tone={stage.id} /> : <div className="mt-4 h-8 rounded-full border border-current/10 bg-paper/35" />}
-      {running ? <div className="absolute bottom-0 left-0 h-1 w-full animate-pulse-soft bg-current/50" /> : null}
-    </section>
-  );
-}
-
-function CandidateRow({ candidate, selected, onSelect }: { candidate: QualifiedCv; selected: boolean; onSelect: () => void }) {
+function CandidateRow({ candidate, selected, action, onSelect }: { candidate: DailyReviewCandidate; selected: boolean; action?: ReviewAction; onSelect: () => void }) {
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-xl border px-3 py-2.5 text-left transition ${selected ? "border-gold bg-[#FFF8E8]" : "border-line bg-paper hover:border-gold"}`}
+      className={`group w-full rounded-2xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${selected ? "border-[#B89542] bg-[#FFF9EB] shadow-soft" : "border-line bg-paper hover:border-[#B89542] hover:bg-[#FFFCF5]"}`}
     >
-      <span>
-        <span className="block text-sm font-bold text-ink">{candidate.name}</span>
-        <span className="mt-0.5 block text-xs text-muted">{candidate.role} · {candidate.location}</span>
-      </span>
-      <span className="self-center rounded-full bg-[#EAF4EC] px-2 py-1 text-xs font-bold text-good">{candidate.score}%</span>
+      <div className="flex gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-ink text-xs font-bold text-paper">{initials(candidate.name)}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold text-ink">{candidate.name}</span>
+          <span className="mt-0.5 block truncate text-xs text-muted">{candidate.role} · {candidate.location}</span>
+          <span className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-muted"><CircleCheck size={13} className="text-good" />{candidate.matchedRequirements}/{candidate.requiredRequirements} core requirements · {candidate.years} yrs</span>
+          <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${candidate.recommendation === "Passed" ? "border-[#BFDCC8] bg-[#EAF4EC] text-good" : "border-[#E3D2A6] bg-[#FFF7E2] text-[#8A6516]"}`}>{candidate.recommendation === "Passed" ? "Passed all" : "Reviewable"}</span>
+          {action ? <span className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${actionStyle[action]}`}>{action}</span> : null}
+        </span>
+        <EvidenceScore score={candidate.score} compact />
+        <ChevronRight size={16} className="mt-3 shrink-0 text-faint transition group-hover:translate-x-0.5 group-hover:text-gold" aria-hidden="true" />
+      </div>
     </button>
   );
 }
 
-export function CvIngestionPanel() {
-  const [runState, setRunState] = useState<RunState>("ready");
-  const [selectedId, setSelectedId] = useState(pipeline.bronze[0]?.id ?? "");
-  const [groupBy, setGroupBy] = useState<AggregationMode>("skillCluster");
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const selected = pipeline.bronze.find((candidate) => candidate.id === selectedId) ?? pipeline.bronze[0];
-  const complete = runState === "complete";
-  const goldVisible = runState === "gold" || complete;
-  const aggregate = useMemo(() => aggregateGoldCandidates(pipeline.gold, groupBy), [groupBy]);
-  const bronzeChoices = selected && !pipeline.bronze.slice(0, 8).some((candidate) => candidate.id === selected.id)
-    ? [...pipeline.bronze.slice(0, 7), selected]
-    : pipeline.bronze.slice(0, 8);
+function DecisionAction({ label, icon, className, onClick }: { label: string; icon: React.ReactNode; className: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${className}`}>{icon}{label}</button>;
+}
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+function EvidenceScore({ score, compact = false }: { score: number; compact?: boolean }) {
+  return (
+    <div className="shrink-0 text-center" role="img" aria-label={`${score} percent evidence score`}>
+      <div className={`grid place-items-center rounded-full ${compact ? "size-10 p-[3px]" : "size-[92px] p-[7px]"}`} style={{ background: `conic-gradient(#39B878 0 ${score}%, #DCE2DC ${score}% 100%)` }}>
+        <div className="grid size-full place-items-center rounded-full bg-[#FFFDF8] text-ink"><span className={`font-serif font-semibold leading-none ${compact ? "text-xs" : "text-2xl"}`}>{score}{compact ? null : <span className="text-sm">%</span>}</span></div>
+      </div>
+      {!compact ? <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#D7C899]">Evidence fit</p> : null}
+    </div>
+  );
+}
 
-  function runIngestion() {
-    timers.current.forEach(clearTimeout);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setRunState("complete");
-      return;
-    }
-    setRunState("bronze");
-    timers.current = [
-      setTimeout(() => setRunState("silver"), 750),
-      setTimeout(() => setRunState("gold"), 1500),
-      setTimeout(() => setRunState("complete"), 2250)
-    ];
+export function CvIngestionPanel({ records: _records }: { records: ExtractedCv[] }) {
+  const [role, setRole] = useState<RoleFilter>("All roles");
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
+  const [selectedId, setSelectedId] = useState("");
+  const [actions, setActions] = useState<Record<string, ReviewAction>>({});
+  void _records;
+  const desk = useMemo(() => buildDailyReviewDesk(mockDailyCvs, role === "All roles" ? undefined : role), [role]);
+  const visibleQueue = desk.queue.filter((candidate) => queueFilter === "all" || candidate.recommendation.toLowerCase() === queueFilter);
+  const passedCount = desk.queue.filter((candidate) => candidate.recommendation === "Passed").length;
+  const reviewableCount = desk.queue.filter((candidate) => candidate.recommendation === "Reviewable").length;
+  const selected = visibleQueue.find((candidate) => candidate.id === selectedId) ?? visibleQueue[0];
+
+  function decide(action: ReviewAction) {
+    if (selected) setActions((current) => ({ ...current, [selected.id]: action }));
   }
 
   return (
-    <div>
-      <EmployerPageHeader moduleId="ingestion" />
-      <div className="grid gap-4">
-        <section className="relative overflow-hidden rounded-[22px] border border-[#253858] bg-[linear-gradient(120deg,#101c33,#1e3151_62%,#70551d_160%)] p-5 text-paper shadow-lifted">
-          <div className="absolute -right-12 -top-16 size-64 rounded-full border border-[#E8C878]/25 bg-[#E8C878]/10" />
-          <div className="absolute right-10 top-12 size-36 rounded-full border border-paper/10" />
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="kicker text-[#E8C878]">Medallion architecture · hiring ops</p>
-              <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight sm:text-5xl">Turn submissions into a trusted talent pool.</h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-paper/70">A fixed batch of extracted CV records moves through validation and role matching—then becomes an explainable shortlist your hiring team can use.</p>
-            </div>
-            <button
-              type="button"
-              onClick={runIngestion}
-              disabled={runState !== "ready" && !complete}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#E8C878] px-5 py-3 text-sm font-bold text-[#1c1402] transition hover:bg-paper disabled:cursor-wait disabled:opacity-70"
-            >
-              {complete ? <RotateCcw size={16} aria-hidden="true" /> : <Play size={16} fill="currentColor" aria-hidden="true" />}
-              {complete ? "Run again" : runState === "ready" ? "Run ingestion" : "Ingestion running"}
-            </button>
-          </div>
-          <div className="relative mt-5 flex flex-wrap gap-2 text-xs font-semibold text-paper/80">
-            {["24 submitted", "3 open roles", "deterministic demo data"].map((item) => <span key={item} className="rounded-full border border-paper/15 bg-paper/10 px-3 py-1.5">{item}</span>)}
-          </div>
-        </section>
+    <div className="space-y-5 pb-8">
+      <EmployerPageHeader moduleId="dashboard" />
 
-        <p aria-live="polite" className="sr-only">{runState === "ready" ? "Pipeline ready" : complete ? "Ingestion complete: 11 qualified candidates" : `Processing ${runState} layer`}</p>
-
-        <section className="grid gap-3 xl:grid-cols-[1fr_auto_1fr_auto_1fr] xl:items-center">
-          {stages.map((stage, index) => {
-            const count = stage.id === "bronze" ? pipeline.bronze.length : stage.id === "silver" ? pipeline.silver.length : pipeline.gold.length;
-            const records = stage.id === "bronze" ? pipeline.bronze : stage.id === "silver" ? pipeline.silver : pipeline.gold;
-            const active = stateIncludes(runState, stage.id);
-            return (
-              <div key={stage.id} className="contents">
-                <StageCard stage={stage} count={count} records={records} running={runState === stage.id} complete={active && runState !== stage.id} />
-                {index < stages.length - 1 ? <div className="hidden place-items-center text-gold xl:grid"><Workflow size={25} aria-hidden="true" /></div> : null}
-              </div>
-            );
-          })}
-        </section>
-
-        <section className="grid gap-4 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div className="rounded-[18px] border border-line bg-paper p-4 shadow-soft">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="kicker">Bronze record inspection</p>
-                <h2 className="mt-1 font-serif text-2xl font-semibold text-ink">Submission evidence</h2>
-              </div>
-              <FileText size={22} className="text-gold" aria-hidden="true" />
+      <section className="overflow-hidden rounded-[22px] border border-[#CFC6B3] bg-[#FFFDF8] shadow-soft">
+        <div className="border-b border-[#E8E1D3] px-5 py-4 sm:px-6">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            <div>
+              <p className="kicker text-[#8A6516]">Today’s CV review desk</p>
+              <h1 className="mt-1 max-w-2xl font-serif text-3xl font-semibold leading-tight text-ink sm:text-4xl">Review only the people who already meet the bar.</h1>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {bronzeChoices.map((candidate) => (
-                <button key={candidate.id} type="button" onClick={() => setSelectedId(candidate.id)} className={`rounded-xl border px-3 py-2 text-left text-sm font-semibold transition ${selected.id === candidate.id ? "border-gold bg-[#FFF8E8] text-ink" : "border-line bg-mist text-muted hover:border-gold"}`}>
-                  {candidate.name}
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 rounded-[14px] border border-line bg-mist p-4">
-              <div className="flex items-start gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-full bg-ink text-sm font-bold text-paper">{selected.name.split(" ").map((name) => name[0]).join("").slice(0, 2)}</span>
-                <div>
-                  <p className="text-base font-bold text-ink">{selected.name}</p>
-                  <p className="mt-0.5 text-sm text-muted">{selected.role} · {selected.location}</p>
-                  <p className="mt-2 text-xs font-semibold text-muted">{selected.source}</p>
-                </div>
-              </div>
-              <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-xl border border-line bg-paper p-3"><dt className="kicker">Experience</dt><dd className="mt-1 font-bold text-ink">{selected.years} years</dd></div>
-                <div className="rounded-xl border border-line bg-paper p-3"><dt className="kicker">Parse confidence</dt><dd className="mt-1 font-bold text-ink">{selected.confidence}%</dd></div>
-              </dl>
-              <div className="mt-3"><p className="kicker">Extracted strengths</p><div className="mt-2 flex flex-wrap gap-1.5">{selected.skills.map((skill) => <span key={skill} className="rounded-full bg-[#E8EFF7] px-2.5 py-1 text-xs font-semibold text-info">{skill}</span>)}</div></div>
-            </div>
-            <div className={`mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${selected.status ? "bg-[#F8E8E5] text-bad" : "bg-[#EAF4EC] text-good"}`}>
-              {selected.status ? <CircleX size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
-              {selected.status ? `Silver rejection: ${selected.status}` : "Silver validation: ready for matching"}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1.5 text-muted"><Clock3 size={13} />Snapshot 08:45 today</span>
             </div>
           </div>
+        </div>
+        <div className="grid divide-y divide-[#E8E1D3] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="p-4 sm:px-6"><p className="kicker">Received today</p><p className="mt-1 font-serif text-3xl font-semibold text-ink">{desk.totalReceived.toLocaleString()}</p><p className="mt-1 text-xs text-muted">CVs extracted into this batch</p></div>
+          <div className="p-4 sm:px-6"><p className="kicker">Hard filters not passed</p><p className="mt-1 font-serif text-3xl font-semibold text-bad">{desk.autoFiltered.toLocaleString()}</p><p className="mt-1 text-xs text-muted">JD experience or degree rules only</p></div>
+          <div className="p-4 sm:px-6"><p className="kicker">Perfect resumes</p><p className="mt-1 font-serif text-3xl font-semibold text-good">{desk.passed.length.toLocaleString()}</p><p className="mt-1 text-xs text-muted">Every stated requirement matched</p></div>
+        </div>
+      </section>
 
-          <div className="rounded-[18px] border border-line bg-paper p-4 shadow-soft">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="kicker">Gold aggregation</p>
-                <h2 className="mt-1 font-serif text-2xl font-semibold text-ink">Trusted candidates, organised</h2>
-              </div>
-              <div className="flex rounded-full border border-line bg-mist p-1">
-                {(["skillCluster", "experienceBand", "location", "gap"] as const).map((mode) => (
-                  <button key={mode} type="button" onClick={() => setGroupBy(mode)} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${groupBy === mode ? "bg-ink text-paper" : "text-muted hover:text-ink"}`}>
-                    {mode === "skillCluster" ? "Skills" : mode === "experienceBand" ? "Experience" : mode === "gap" ? "Gaps" : "Location"}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {aggregate.map((item) => (
-                <div key={item.label} className="rounded-[14px] border border-[#E3D2A6] bg-[#FFF8E8] p-3">
-                  <p className="kicker text-[#8A6516]">{groupBy === "skillCluster" ? "Capability" : groupBy === "experienceBand" ? "Experience" : groupBy === "gap" ? "Evidence gap" : "Location"}</p>
-                  <p className="mt-2 text-sm font-bold text-ink">{item.label}</p>
-                  <p className="mt-3 font-serif text-3xl font-semibold text-gold">{goldVisible ? item.count : "—"}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 flex items-center gap-2 border-t border-line pt-4 text-sm font-semibold text-ink"><ShieldCheck size={18} className="text-good" aria-hidden="true" /> 11 people cleared validation and role-fit thresholds.</div>
-            <div className="mt-3 grid gap-2">
-              {pipeline.gold.slice(0, 5).map((candidate) => <CandidateRow key={candidate.id} candidate={candidate} selected={selected.id === candidate.id} onSelect={() => setSelectedId(candidate.id)} />)}
-            </div>
-            <div className="mt-4 flex items-center gap-2 rounded-[14px] bg-[#E8EFF7] px-3 py-2.5 text-sm text-info"><Sparkles size={16} aria-hidden="true" /> Gold holds only candidates with enough evidence to review.</div>
+      <section className="rounded-[18px] border border-line bg-paper p-3 shadow-soft sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2 text-sm font-bold text-ink"><Filter size={16} className="text-gold" />Review queue for</div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter review queue by role">
+            {(["All roles", ...desk.roles.map((entry) => entry.title)] as RoleFilter[]).map((entry) => {
+              const count = entry === "All roles" ? desk.reviewReady : desk.roles.find((item) => item.title === entry)?.count ?? 0;
+              return <button key={entry} type="button" onClick={() => setRole(entry)} className={`rounded-full border px-3 py-1.5 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${role === entry ? "border-ink bg-ink text-paper" : "border-line bg-mist text-muted hover:border-gold hover:text-ink"}`}>{entry} <span className="ml-1 opacity-70">{count}</span></button>;
+            })}
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
+
+      <section className="grid items-start gap-4 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]">
+        <aside className="overflow-hidden rounded-[20px] border border-line bg-paper shadow-soft">
+          <div className="border-b border-line px-4 py-4"><div className="flex items-start justify-between gap-3"><div><p className="kicker">Prioritised queue</p><h2 className="mt-1 font-serif text-2xl font-semibold text-ink">{role === "All roles" ? "Best fit, by role" : role}</h2></div><span className="rounded-full bg-[#EAF4EC] px-2.5 py-1 text-xs font-bold text-good">{visibleQueue.length} to review</span></div><p className="mt-2 text-xs leading-5 text-muted">Hard filters cannot be bypassed. Requirement gaps are visible, not automatic rejections.</p></div>
+          <div className="grid grid-cols-2 gap-2 border-b border-line p-3" role="group" aria-label="Filter candidates by review status">
+            <button type="button" onClick={() => setQueueFilter("passed")} className={`rounded-xl border px-3 py-2 text-left transition ${queueFilter === "passed" ? "border-[#8DBCA0] bg-[#EAF4EC] text-good" : "border-line bg-mist text-muted hover:border-[#8DBCA0]"}`}><span className="block text-xs font-bold">Passed all</span><span className="mt-0.5 block text-[11px]">{passedCount} full matches</span></button>
+            <button type="button" onClick={() => setQueueFilter("reviewable")} className={`rounded-xl border px-3 py-2 text-left transition ${queueFilter === "reviewable" ? "border-[#D9BD74] bg-[#FFF7E2] text-[#8A6516]" : "border-line bg-mist text-muted hover:border-[#D9BD74]"}`}><span className="block text-xs font-bold">Reviewable</span><span className="mt-0.5 block text-[11px]">{reviewableCount} partial matches</span></button>
+            {queueFilter !== "all" ? <button type="button" onClick={() => setQueueFilter("all")} className="col-span-2 text-xs font-bold text-muted underline decoration-line underline-offset-4 hover:text-ink">Show all {desk.queue.length} eligible candidates</button> : null}
+          </div>
+          <div className="max-h-[620px] space-y-2 overflow-y-auto p-3">
+            {visibleQueue.map((candidate) => <CandidateRow key={candidate.id} candidate={candidate} selected={selected?.id === candidate.id} action={actions[candidate.id]} onSelect={() => setSelectedId(candidate.id)} />)}
+            {!visibleQueue.length ? <p className="rounded-xl bg-mist p-4 text-sm text-muted">No candidates match this review status for the selected role.</p> : null}
+          </div>
+        </aside>
+
+        {selected ? <article className="overflow-hidden rounded-[20px] border border-line bg-paper shadow-soft">
+          <div className="border-b border-line bg-[#132440] px-5 py-5 text-paper sm:px-6">
+            <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-3"><span className="grid size-12 place-items-center rounded-2xl bg-paper text-sm font-bold text-ink">{initials(selected.name)}</span><div><p className="kicker text-[#D7C899]">Candidate review</p><h2 className="mt-1 font-serif text-3xl font-semibold">{selected.name}</h2><p className="mt-1 text-sm text-paper/70">{selected.role} · {selected.years} years experience</p></div></div><EvidenceScore score={selected.score} /></div>
+            <div className="mt-4 flex flex-wrap gap-2"><span className="inline-flex items-center gap-1.5 rounded-full bg-paper/10 px-2.5 py-1 text-xs font-bold text-paper"><MapPin size={13} />{selected.location}</span><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${selected.recommendation === "Passed" ? "bg-[#EAF4EC] text-good" : "bg-[#FFF1D8] text-[#8A6516]"}`}><BadgeCheck size={13} />{selected.recommendation === "Passed" ? "Passed all requirements" : "Reviewable · gaps flagged"}</span>{actions[selected.id] ? <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${actionStyle[actions[selected.id]]}`}>{actions[selected.id]}</span> : null}</div>
+          </div>
+
+          <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <p className="kicker">Why this CV is here</p>
+              <h3 className="mt-1 text-lg font-bold text-ink">{selected.recommendation === "Passed" ? "Every stated requirement was evidenced." : "Hard filters passed; missing requirements need human context."}</h3>
+              <div className="mt-4 space-y-3">
+                {selected.evidence.map((item) => <div key={item.label} className="flex gap-3 rounded-xl border border-line bg-[#FFFCF6] p-3"><span className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full ${item.passed ? "bg-[#EAF4EC] text-good" : "bg-[#F7EFD9] text-warn"}`}>{item.passed ? <CircleCheck size={13} /> : <Pause size={12} />}</span><div><p className="text-sm font-bold text-ink">{item.label}</p><p className="mt-0.5 text-xs leading-5 text-muted">{item.detail}</p></div></div>)}
+              </div>
+              <div className="mt-5"><p className="kicker">Matched skills</p><div className="mt-2 flex flex-wrap gap-2">{selected.skills.map((skill) => <span key={skill} className="rounded-full bg-[#E8EFF7] px-2.5 py-1 text-xs font-semibold text-info">{skill}</span>)}</div></div>
+            </div>
+            <div className="rounded-2xl border border-[#E8D6A5] bg-[#FFF9EB] p-4"><p className="kicker text-[#8A6516]">Human decision</p><h3 className="mt-1 font-serif text-2xl font-semibold text-ink">What do you want to do?</h3><p className="mt-2 text-sm leading-6 text-muted">AI prioritised this CV. The hiring team owns the outcome and can review the source file before deciding.</p><a href="#" onClick={(event) => event.preventDefault()} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#795907] underline decoration-[#C9A449] underline-offset-4">Open {selected.source}<FileSearch size={15} /></a><div className="mt-5 grid gap-2"><DecisionAction label="Shortlist" icon={<UserCheck size={16} />} className="border-ink bg-ink text-paper hover:bg-[#253a5d]" onClick={() => decide("Shortlisted")} /><div className="flex gap-2"><DecisionAction label="Hold" icon={<Pause size={15} />} className="border-[#D5C18D] bg-paper text-[#795907] hover:bg-[#FFF6DE]" onClick={() => decide("On hold")} /><DecisionAction label="Decline" icon={<XCircle size={15} />} className="border-[#E8BDB7] bg-paper text-bad hover:bg-[#FDF0ED]" onClick={() => decide("Not progressing")} /></div></div><div className="mt-5 flex gap-2 border-t border-[#E8D6A5] pt-4 text-xs leading-5 text-[#715F36]"><LockKeyhole size={14} className="mt-0.5 shrink-0" />Actions are mocked for this preview. The migration will persist the decision, reviewer, reason, and audit event.</div></div>
+          </div>
+        </article> : null}
+      </section>
+
+      <section className="grid gap-3 rounded-[18px] border border-line bg-mist p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div><p className="kicker">Screening guardrails</p><p className="mt-1 text-sm leading-6 text-ink"><strong>{desk.autoFiltered.toLocaleString()} CVs did not meet a non-bypassable JD rule.</strong> {desk.deferred.length} more cleared hard filters but are deferred outside today’s 35% review pool—not rejected.</p></div>
+        <div className="flex flex-wrap gap-2">{desk.hardFilterBreakdown.map((reason) => <span key={reason.label} className="rounded-full border border-line bg-paper px-2.5 py-1 text-xs font-semibold text-muted">{reason.count} {reason.label}</span>)}<span className="rounded-full border border-[#BFDCC8] bg-[#EAF4EC] px-2.5 py-1 text-xs font-semibold text-good">24 passed all requirements</span></div>
+      </section>
     </div>
   );
 }

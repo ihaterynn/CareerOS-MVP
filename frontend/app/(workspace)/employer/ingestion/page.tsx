@@ -1,5 +1,5 @@
-import { CvIngestionPanel } from "@/modules/employer/components/ingestion-panel";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <CvIngestionPanel />;
+  redirect("/employer/dashboard");
 }

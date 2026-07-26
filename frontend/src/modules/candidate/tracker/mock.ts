@@ -3,7 +3,7 @@
 // (labels, colors, avatar styling) is derived in components. Doubles as local-dev seed
 // when Supabase lands (spec §8).
 
-import type { TrackerData } from "./types";
+import type { Application, TrackerData } from "./types";
 
 export const trackerMock: TrackerData = {
   analytics: { avgDaysInStage: 6.2, slowestStage: "screening" },
@@ -200,3 +200,7 @@ export const trackerMock: TrackerData = {
     }
   ]
 };
+
+export function trackerDataOrMock(applications: Application[]): TrackerData {
+  return applications.length ? { applications, analytics: { avgDaysInStage: null, slowestStage: null } } : trackerMock;
+}

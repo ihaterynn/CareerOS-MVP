@@ -10,12 +10,7 @@ export type EmployerModuleId =
   | "career-root"
   | "talent"
   | "jobby"
-  | "ingestion"
-  | "retention"
-  | "onboarding"
-  | "heatmap"
-  | "attrition"
-  | "review";
+  | "onboarding";
 
 export type NavigationItem<TId extends string> = {
   id: TId;

@@ -1,5 +1,5 @@
-import { AttritionPanel } from "@/modules/employer/components/attrition-panel";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <AttritionPanel />;
+  redirect("/employer/dashboard");
 }

@@ -57,8 +57,8 @@ export type BoardColumnId =
   | "closed";
 
 export type TrackerAnalytics = {
-  avgDaysInStage: number;
-  slowestStage: string;
+  avgDaysInStage: number | null;
+  slowestStage: string | null;
 };
 
 export type TrackerData = {
