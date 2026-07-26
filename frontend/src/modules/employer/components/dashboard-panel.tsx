@@ -54,7 +54,7 @@ export function EmployerDashboardPanel() {
           <section className="rounded-[18px] border border-line bg-paper p-4 shadow-soft">
             <p className="kicker">Live employer modules</p>
             <div className="mt-3 grid gap-2">
-              {["Career Root", "Talent Match", "Skill Heatmap", "Review"].map((label, index) => (
+              {["Career Root", "Hiring Pipeline", "Skill Heatmap", "Review"].map((label, index) => (
                 <div key={label} className="flex items-center gap-3 rounded-[12px] border border-line bg-mist p-3">
                   <span className="grid size-8 place-items-center rounded-full bg-ink text-xs font-bold text-paper">0{index + 1}</span>
                   <span className="text-sm font-semibold text-ink">{label}</span>
