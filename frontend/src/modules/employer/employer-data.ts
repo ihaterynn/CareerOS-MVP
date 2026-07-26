@@ -325,8 +325,8 @@ export const employerModules: Array<NavigationItem<EmployerModuleId>> = [
   },
   {
     id: "talent",
-    label: "Talent Match",
-    description: "Composite candidate matching across skills, education, experience, and interests."
+    label: "Hiring Pipeline",
+    description: "Role matching, candidate shortlisting, interview preparation, and structured hiring decisions."
   },
   {
     id: "ingestion",
